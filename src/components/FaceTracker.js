@@ -41,7 +41,7 @@ function drawPath(ctx, points, closePath) {
   ctx.stroke(region);
 }
 
-const FaceTracker = ({ videoRef, userId }) => {
+const FaceTracker = ({ videoRef, userId, stream }) => {
   const [count, setCount] = React.useState(0);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
@@ -49,6 +49,13 @@ const FaceTracker = ({ videoRef, userId }) => {
   let faces = [];
   let model = null;
   let ctx, videoWidth, videoHeight, video, canvas;
+
+  useEffect(() => {
+    console.log("wolfy");
+    console.log({ stream });
+    _init();
+  }, [stream]);
+
   async function _init() {
     model = await facemesh.load();
 
@@ -56,6 +63,8 @@ const FaceTracker = ({ videoRef, userId }) => {
     // an array of detected faces from the MediaPipe graph.
     // video = document.querySelector("video");
     video = document.getElementById(`video-${userId}`);
+    console.log({ stream });
+    video.srcObject = stream;
     video.addEventListener("loadeddata", async (event) => {
       console.log(
         "Yay! The readyState just increased to  " +
@@ -137,17 +146,13 @@ const FaceTracker = ({ videoRef, userId }) => {
   //     console.log(faces.length);
   //   });
 
-  useEffect(() => {
-    _init();
-  }, []);
-
   return (
     <div className="canvas-wrapper">
       <video
         id={`video-${userId}`}
         autoPlay
         muted
-        ref={videoRef}
+        // ref={videoRef}
         playsInline
         style={{
           WebkitTransform: "scaleX(-1)",

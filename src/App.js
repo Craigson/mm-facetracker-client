@@ -42,7 +42,7 @@ class App extends Component {
       roomId: "",
       host: false,
     },
-
+    stream: null,
     login: true,
     peerConnections: [],
     videoFeeds: [],
@@ -239,7 +239,9 @@ class App extends Component {
         .getUserMedia(this.constraints)
         .then((stream) => {
           this.localStream = stream;
-          this.localVideoRef.current.srcObject = this.localStream;
+          console.log({ stream });
+          this.setState({ stream });
+          // this.localVideoRef.current.srcObject = this.localStream;
           this.sendPrediction = true;
         })
         .catch(this.errorHandler)
@@ -305,7 +307,7 @@ class App extends Component {
       page = (
         <div className="App">
           <VideoFeed
-            videoRef={this.localVideoRef}
+            stream={this.state.stream}
             videoFeeds={this.state.videoFeeds}
           />
         </div>
