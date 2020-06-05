@@ -1,41 +1,21 @@
-import React, { Component } from "react";
+import React, { useState, useEffect } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
+import { uuid } from "uuid/v4";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-    this.localVideoRef = React.createRef();
-    this.canvasRef = React.createRef();
-    this.localStream = "";
-    this.peerConnections = [];
-    this.peerConnectionConfig = {
-      iceServers: [
-        { urls: "stun:stun.stunprotocol.org:3478" },
-        { urls: "stun:stun.l.google.com:19302" },
-      ],
-    };
+const constraints = {
+  video: {
+    width: { max: 320 },
+    height: { max: 240 },
+    frameRate: { max: 24 },
+  },
+  audio: true,
+};
 
-    this.client = new W3CWebSocket("wss://10.0.1.12:8443");
-
-    this.sendPrediction = false;
-    this.hasStream = [];
-  }
-
-  componentWillMount() {
-    let hash = window.location.hash.replace("#", "");
-    if (hash.split("=")[0] === "roomId") {
-      let me = this.state.me;
-      me.roomId = hash.split("=")[1];
-      this.setState({ me: me });
-    }
-    (async () => {
-      this.setState({ loading_model: false });
-    })();
-  }
-
-  state = {
+const client = new W3CWebSocket("wss://10.0.1.12:8443");
+function App() {
+  const [state, setState] = useState({
     me: {
       uuid: "",
       username: "",
@@ -46,39 +26,61 @@ class App extends Component {
     login: true,
     peerConnections: [],
     videoFeeds: [],
+  });
+
+  let localStream = "";
+  let peerConnections = [];
+  const peerConnectionConfig = {
+    iceServers: [
+      { urls: "stun:stun.stunprotocol.org:3478" },
+      { urls: "stun:stun.l.google.com:19302" },
+    ],
   };
 
-  constraints = {
-    video: {
-      width: { max: 320 },
-      height: { max: 240 },
-      frameRate: { max: 24 },
-    },
-    audio: true,
-  };
+  let hasStream = [];
 
-  addUser = (player) => {
+  useEffect(() => {
+    // setState({ ...state, ...{ ...state.me, uuid: uuid() } });
+    _init();
+  }, []);
+
+  // componentWillMount() {
+  //   let hash = window.location.hash.replace("#", "");
+  //   if (hash.split("=")[0] === "roomId") {
+  //     let me =  state.me;
+  //     me.roomId = hash.split("=")[1];
+  //      setState({ me: me });
+  //   }
+  //   (async () => {
+  //      setState({ loading_model: false });
+  //   })();
+
+  const addUser = (player) => {
     console.log("adding new user");
-    if (this.state.players < 2)
-      this.setState({ players: [...this.state.players, player] });
+    if (state.players < 2)
+      setState({ ...state, players: [...state.players, player] });
     else console.log("max 2 people per room");
   };
 
-  addVideoFeed = (videoFeed) => {
+  const addVideoFeed = (videoFeed) => {
     console.log("adding video feed");
-    this.setState({ videoFeeds: [...this.state.videoFeeds, videoFeed] });
+    setState({ ...state, videoFeeds: [...state.videoFeeds, videoFeed] });
   };
 
-  componentDidMount() {
-    this.client.onopen = () => {
+  function _init() {
+    console.log("init websocket");
+    // client = new W3CWebSocket("wss://10.0.1.12:8443");
+
+    client.onopen = () => {
       console.log("WebSocket Client Connected");
     };
-    this.client.onmessage = (message) => {
+    client.onmessage = (message) => {
       let obj = JSON.parse(message.data);
       console.log(obj);
       switch (obj.eventName) {
         case "selfSetup":
-          this.setState({
+          setState({
+            ...state,
             me: {
               uuid: obj.data.user.uuid,
               username: obj.data.user.username,
@@ -91,50 +93,47 @@ class App extends Component {
         case "p2pAction":
           var peerUuid = obj.data.uuid;
           if (
-            peerUuid === this.state.me.uuid ||
-            (obj.data.dest !== this.state.me.uuid && obj.data.dest !== "all")
+            peerUuid === state.me.uuid ||
+            (obj.data.dest !== state.me.uuid && obj.data.dest !== "all")
           ) {
             break;
           }
 
           if (obj.data.displayName && obj.data.dest === "all") {
             // set up peer connection object for a newcomer peer
-            this.setUpPeer(peerUuid, obj.data.displayName);
-            this.client.send(
+            setUpPeer(peerUuid, obj.data.displayName);
+            client.send(
               JSON.stringify({
                 eventName: "p2pAction",
                 data: {
-                  displayName: this.state.me.username,
-                  uuid: this.state.me.uuid,
+                  displayName: state.me.username,
+                  uuid: state.me.uuid,
                   dest: peerUuid,
                 },
               })
             );
-          } else if (
-            obj.data.displayName &&
-            obj.data.dest === this.state.me.uuid
-          ) {
+          } else if (obj.data.displayName && obj.data.dest === state.me.uuid) {
             // initiate call if we are the newcomer peer
-            this.setUpPeer(peerUuid, obj.data.displayName, true);
+            setUpPeer(peerUuid, obj.data.displayName, true);
           } else if (obj.data.sdp) {
-            this.peerConnections[peerUuid].pc
+            peerConnections[peerUuid].pc
               .setRemoteDescription(new RTCSessionDescription(obj.data.sdp))
               .then(() => {
                 // Only create answers in response to offers
                 if (obj.data.sdp.type === "offer") {
-                  this.peerConnections[peerUuid].pc
+                  peerConnections[peerUuid].pc
                     .createAnswer()
                     .then((description) =>
-                      this.createdDescription(description, peerUuid)
+                      createdDescription(description, peerUuid)
                     )
-                    .catch(this.errorHandler);
+                    .catch(errorHandler);
                 }
               })
-              .catch(this.errorHandler);
+              .catch(errorHandler);
           } else if (obj.data.ice) {
-            this.peerConnections[peerUuid].pc
+            peerConnections[peerUuid].pc
               .addIceCandidate(new RTCIceCandidate(obj.data.ice))
-              .catch(this.errorHandler);
+              .catch(errorHandler);
           }
           break;
         default:
@@ -143,14 +142,14 @@ class App extends Component {
     };
   }
 
-  gotIceCandidate = (event, peerUuid) => {
+  const gotIceCandidate = (event, peerUuid) => {
     if (event.candidate != null) {
-      this.client.send(
+      client.send(
         JSON.stringify({
           eventName: "p2pAction",
           data: {
             ice: event.candidate,
-            uuid: this.state.me.uuid,
+            uuid: state.me.uuid,
             dest: peerUuid,
           },
         })
@@ -158,53 +157,53 @@ class App extends Component {
     }
   };
 
-  setUpPeer = (peerUuid, displayName, initCall = false) => {
+  const setUpPeer = (peerUuid, displayName, initCall = false) => {
     console.log(
       `setting up webRTC peer: uuid - ${peerUuid}, displayName: ${displayName}`
     );
-    this.peerConnections[peerUuid] = {
+    peerConnections[peerUuid] = {
       displayName: displayName,
-      pc: new RTCPeerConnection(this.peerConnectionConfig),
+      pc: new RTCPeerConnection(peerConnectionConfig),
     };
-    this.peerConnections[peerUuid].pc.onicecandidate = (event) =>
-      this.gotIceCandidate(event, peerUuid);
-    this.peerConnections[peerUuid].pc.ontrack = (event) =>
-      this.gotRemoteStream(event, peerUuid);
-    this.peerConnections[peerUuid].pc.oniceconnectionstatechange = (event) =>
-      this.checkPeerDisconnect(event, peerUuid);
-    this.peerConnections[peerUuid].pc.addStream(this.localStream);
+    peerConnections[peerUuid].pc.onicecandidate = (event) =>
+      gotIceCandidate(event, peerUuid);
+    peerConnections[peerUuid].pc.ontrack = (event) =>
+      gotRemoteStream(event, peerUuid);
+    peerConnections[peerUuid].pc.oniceconnectionstatechange = (event) =>
+      checkPeerDisconnect(event, peerUuid);
+    peerConnections[peerUuid].pc.addStream(localStream);
 
     if (initCall) {
-      this.peerConnections[peerUuid].pc
+      peerConnections[peerUuid].pc
         .createOffer()
-        .then((description) => this.createdDescription(description, peerUuid))
-        .catch(this.errorHandler);
+        .then((description) => createdDescription(description, peerUuid))
+        .catch(errorHandler);
     }
   };
 
-  errorHandler = (err) => {
+  const errorHandler = (err) => {
     console.log(err);
   };
 
-  checkPeerDisconnect = (event, peerUuid) => {
-    var states = this.peerConnections[peerUuid].pc.iceConnectionState;
+  const checkPeerDisconnect = (event, peerUuid) => {
+    var states = peerConnections[peerUuid].pc.iceConnectionState;
     console.log(`connection with peer ${peerUuid} ${states}`);
     if (
       states === "failed" ||
       states === "closed" ||
       states === "disconnected"
     ) {
-      delete this.peerConnections[peerUuid];
-      let videoFeeds = this.state.videoFeeds;
+      delete peerConnections[peerUuid];
+      let videoFeeds = state.videoFeeds;
       videoFeeds = videoFeeds.filter((ele) => {
         return ele.peerUUID !== peerUuid;
       });
-      this.setState({ videoFeeds: videoFeeds });
+      setState({ ...state, videoFeeds: videoFeeds });
     }
   };
 
-  connectToSocket = () => {
-    const { me } = this.state;
+  const connectToSocket = () => {
+    const { me } = state;
     let data = {
       eventName: "selfSetup",
       data: {
@@ -212,10 +211,10 @@ class App extends Component {
         displayName: me.username,
       },
     };
-    this.client.send(JSON.stringify(data));
+    client.send(JSON.stringify(data));
   };
 
-  gotRemoteStream = (event, peerUuid) => {
+  const gotRemoteStream = (event, peerUuid) => {
     console.log(event);
     if (event.track.kind === "video") {
       console.log(`got remote stream, peer ${peerUuid}`);
@@ -225,34 +224,34 @@ class App extends Component {
         stream: event.streams[0],
         peerUUID: peerUuid,
       };
-      this.addVideoFeed(videoFeed);
+      addVideoFeed(videoFeed);
     }
   };
 
-  onLogin = (e) => {
-    const { me } = this.state;
-    if (me.username !== "") {
-      this.setState({ login: false });
-      this.connectToSocket();
+  const onLogin = (e) => {
+    console.log("login");
+    if (state.me.username !== "") {
+      console.log("setting login to false");
+      // setState({ ...state, login: false });
+      connectToSocket();
 
       navigator.mediaDevices
-        .getUserMedia(this.constraints)
+        .getUserMedia(constraints)
         .then((stream) => {
-          this.localStream = stream;
           console.log({ stream });
-          this.setState({ stream });
-          // this.localVideoRef.current.srcObject = this.localStream;
-          this.sendPrediction = true;
+          localStream = stream; // sets it up for the peer
+          setState({ ...state, ...{ stream, login: false } });
+          //  sendPrediction = true;
         })
-        .catch(this.errorHandler)
+        .catch(errorHandler)
         .then(() => {
-          this.client.send(
+          client.send(
             JSON.stringify({
               eventName: "p2pAction",
               data: {
-                uuid: this.state.me.uuid,
-                roomId: this.state.me.roomId,
-                displayName: this.state.me.username,
+                uuid: state.me.uuid,
+                roomId: state.me.roomId,
+                displayName: state.me.username,
                 dest: "all",
               },
             })
@@ -260,61 +259,52 @@ class App extends Component {
         });
     }
   };
-  onUsernameUpdate = (e) => {
-    let me = this.state.me;
-    me.username = e.target.value;
-    this.setState({ me: me });
+  const onUsernameUpdate = (e) => {
+    console.log({ state });
+    console.log("should set state:", e.target.value);
+    const newMe = { ...state.me, username: e.target.value };
+    setState({ ...state, me: newMe });
   };
 
-  createdDescription = (description, peerUuid) => {
+  const createdDescription = (description, peerUuid) => {
     console.log(`got description, peer ${peerUuid}`);
-    this.peerConnections[peerUuid].pc
+    peerConnections[peerUuid].pc
       .setLocalDescription(description)
       .then(() => {
-        this.client.send(
+        client.send(
           JSON.stringify({
             eventName: "p2pAction",
             data: {
-              sdp: this.peerConnections[peerUuid].pc.localDescription,
-              uuid: this.state.me.uuid,
+              sdp: peerConnections[peerUuid].pc.localDescription,
+              uuid: state.me.uuid,
               dest: peerUuid,
             },
           })
         );
       })
-      .catch(this.errorHandler);
+      .catch(errorHandler);
   };
 
-  render() {
-    const { loading_model, login } = this.state;
-    let page;
-
-    if (login) {
-      page = (
-        <div className="App" style={{ marginTop: "15%" }}>
-          <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
-          <input
-            style={{ marginTop: "44px" }}
-            type="text"
-            placeholder="username"
-            name="username"
-            onChange={this.onUsernameUpdate}
-          />
-          <input type="submit" value="connect" onClick={this.onLogin} />
-        </div>
-      );
-    } else {
-      page = (
-        <div className="App">
-          <VideoFeed
-            stream={this.state.stream}
-            videoFeeds={this.state.videoFeeds}
-          />
-        </div>
-      );
-    }
-    return <React.Fragment>{page}</React.Fragment>;
-  }
+  if (state.login)
+    return (
+      <div className="App" style={{ marginTop: "15%" }}>
+        <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
+        <input
+          style={{ marginTop: "44px" }}
+          type="text"
+          placeholder="username"
+          name="username"
+          onChange={onUsernameUpdate}
+        />
+        <input type="submit" value="connect" onClick={onLogin} />
+      </div>
+    );
+  else
+    return (
+      <div className="App">
+        <VideoFeed stream={state.stream} videoFeeds={state.videoFeeds} />
+      </div>
+    );
 }
 
 export default App;

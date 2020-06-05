@@ -41,7 +41,7 @@ function drawPath(ctx, points, closePath) {
   ctx.stroke(region);
 }
 
-const FaceTracker = ({ videoRef, userId, stream }) => {
+const FaceTracker = ({ userId, stream }) => {
   const [count, setCount] = React.useState(0);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
@@ -53,6 +53,7 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
   useEffect(() => {
     console.log("wolfy");
     console.log({ stream });
+    if (stream === null) return;
     _init();
   }, [stream]);
 
@@ -62,6 +63,7 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
     // Pass in a video stream to the model to obtain
     // an array of detected faces from the MediaPipe graph.
     // video = document.querySelector("video");
+    console.log({ userId });
     video = document.getElementById(`video-${userId}`);
     console.log({ stream });
     video.srcObject = stream;
