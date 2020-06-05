@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
-import { uuid } from "uuid/v4";
+import { uuid } from "uuidv4";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
 
@@ -16,6 +16,7 @@ const constraints = {
 const client = new W3CWebSocket("wss://10.0.1.12:8443");
 function App() {
   const [state, setState] = useState({
+    roomId: null,
     me: {
       uuid: "",
       username: "",
@@ -30,6 +31,7 @@ function App() {
 
   let localStream = "";
   let peerConnections = [];
+  let roomId;
   const peerConnectionConfig = {
     iceServers: [
       { urls: "stun:stun.stunprotocol.org:3478" },
@@ -40,20 +42,12 @@ function App() {
   let hasStream = [];
 
   useEffect(() => {
-    // setState({ ...state, ...{ ...state.me, uuid: uuid() } });
+    let hash = window.location.hash.replace("#", "");
+    const newMe = { ...state.me, roomId: hash.split("=")[1] };
+    setState({ ...state, me: newMe });
+    roomId = hash.split("=")[1];
     _init();
   }, []);
-
-  // componentWillMount() {
-  //   let hash = window.location.hash.replace("#", "");
-  //   if (hash.split("=")[0] === "roomId") {
-  //     let me =  state.me;
-  //     me.roomId = hash.split("=")[1];
-  //      setState({ me: me });
-  //   }
-  //   (async () => {
-  //      setState({ loading_model: false });
-  //   })();
 
   const addUser = (player) => {
     console.log("adding new user");
@@ -79,19 +73,24 @@ function App() {
       console.log(obj);
       switch (obj.eventName) {
         case "selfSetup":
+          console.log({ meBefore: state.me });
+          const updatedMe = {
+            uuid: obj.data.user.uuid,
+            username: obj.data.user.username,
+            roomId: obj.data.user.room,
+            host: obj.data.user.role === "HOST" ? true : false,
+          };
+          console.log({ updatedMe });
           setState({
             ...state,
-            me: {
-              uuid: obj.data.user.uuid,
-              username: obj.data.user.username,
-              roomId: obj.data.user.room,
-              host: obj.data.user.role === "HOST" ? true : false,
-            },
+            me: updatedMe,
           });
           console.log(`https://10.0.1.12:3000/#roomId=${obj.data.user.room}`);
           break;
         case "p2pAction":
+          console.log("received p2pAction");
           var peerUuid = obj.data.uuid;
+          console.log({ peerUuid });
           if (
             peerUuid === state.me.uuid ||
             (obj.data.dest !== state.me.uuid && obj.data.dest !== "all")
@@ -102,6 +101,7 @@ function App() {
           if (obj.data.displayName && obj.data.dest === "all") {
             // set up peer connection object for a newcomer peer
             setUpPeer(peerUuid, obj.data.displayName);
+            console.log("sending p2pAction");
             client.send(
               JSON.stringify({
                 eventName: "p2pAction",
@@ -143,6 +143,7 @@ function App() {
   }
 
   const gotIceCandidate = (event, peerUuid) => {
+    console.log("got ICE candidate");
     if (event.candidate != null) {
       client.send(
         JSON.stringify({
@@ -203,6 +204,7 @@ function App() {
   };
 
   const connectToSocket = () => {
+    console.log("connect to socket, roomid: ", state.me.roomId);
     const { me } = state;
     let data = {
       eventName: "selfSetup",
@@ -211,10 +213,12 @@ function App() {
         displayName: me.username,
       },
     };
+    console.log("sending selfSetup");
     client.send(JSON.stringify(data));
   };
 
   const gotRemoteStream = (event, peerUuid) => {
+    console.log("got remote stream");
     console.log(event);
     if (event.track.kind === "video") {
       console.log(`got remote stream, peer ${peerUuid}`);
@@ -235,6 +239,18 @@ function App() {
       // setState({ ...state, login: false });
       connectToSocket();
 
+      client.send(
+        JSON.stringify({
+          eventName: "p2pAction",
+          data: {
+            uuid: state.me.uuid,
+            roomId: roomId,
+            displayName: state.me.username,
+            dest: "all",
+          },
+        })
+      );
+
       navigator.mediaDevices
         .getUserMedia(constraints)
         .then((stream) => {
@@ -243,20 +259,7 @@ function App() {
           setState({ ...state, ...{ stream, login: false } });
           //  sendPrediction = true;
         })
-        .catch(errorHandler)
-        .then(() => {
-          client.send(
-            JSON.stringify({
-              eventName: "p2pAction",
-              data: {
-                uuid: state.me.uuid,
-                roomId: state.me.roomId,
-                displayName: state.me.username,
-                dest: "all",
-              },
-            })
-          );
-        });
+        .catch(errorHandler);
     }
   };
   const onUsernameUpdate = (e) => {

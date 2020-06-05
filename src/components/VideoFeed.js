@@ -23,14 +23,14 @@ function VideoFeed({ videoFeeds, stream }) {
 
     document.documentElement.style.setProperty(`--rowHeight`, rowHeight);
     document.documentElement.style.setProperty(`--colWidth`, colWidth);
-  }, [stream]);
+  }, [stream, videoFeeds.length]);
 
   function renderAdditionalFeeds() {
     return (
       <div>
         {videoFeeds.map((feed, index) => (
           <div key={index} className="videoContainer">
-            <FaceTracker videoRef={feed.ref} userId={index + 1} />
+            <FaceTracker stream={feed.stream} userId={index + 1} />
             {/* <video ref={feed.ref} autoPlay /> */}
           </div>
         ))}
@@ -43,7 +43,7 @@ function VideoFeed({ videoFeeds, stream }) {
         <FaceTracker stream={stream} userId="0" />
         {/* <video ref={videoRef} autoPlay muted /> */}
       </div>
-      {/* {this.renderAdditionalFeeds()} */}
+      {renderAdditionalFeeds()}
     </div>
   );
 }

@@ -58,7 +58,7 @@ const FaceTracker = ({ userId, stream }) => {
   }, [stream]);
 
   async function _init() {
-    model = await facemesh.load();
+    model = await facemesh.load({ maxFaces: 1 });
 
     // Pass in a video stream to the model to obtain
     // an array of detected faces from the MediaPipe graph.
