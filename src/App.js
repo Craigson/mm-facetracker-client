@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { useState, useEffect } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import _isNil from "lodash/isNil";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
@@ -6,127 +6,128 @@ import { Home } from "./containers";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
 
-class App extends Component {
-  constructor(props) {
-    super(props);
-    this.localStream = "";
-    this.peerConnections = [];
-    this.peerConnectionConfig = {
-      iceServers: [
-        { urls: "stun:stun.stunprotocol.org:3478" },
-        { urls: "stun:stun.l.google.com:19302" },
-      ],
-    };
+const constraints = {
+  video: {
+    width: { max: 320 },
+    height: { max: 240 },
+    frameRate: { max: 24 },
+  },
+  audio: true,
+};
 
-    // this.client = new W3CWebSocket("wss://10.0.1.12:8443");
-    this.client = new W3CWebSocket("wss://taskbit.net:8443");
-  }
+const peerConnectionConfig = {
+  iceServers: [
+    { urls: "stun:stun.stunprotocol.org:3478" },
+    { urls: "stun:stun.l.google.com:19302" },
+  ],
+};
 
-  state = {
-    me: {
-      uuid: "",
-      username: "",
-      roomId: "",
-      host: false,
-    },
+function App() {
+  const [me, setMe] = useState({
+    uuid: "",
+    username: "",
+    roomId: "",
+    host: false,
+  });
+  const [login, setLogin] = useState(true);
+  const [videoFeeds, setVideoFeeds] = useState([]);
+  const [stream, setStream] = useState(null);
+  const [peer, setPeer] = useState(null);
 
-    login: true,
-    peerConnections: [],
-    videoFeeds: [],
-    stream: null,
-    peer: null,
-  };
+  const hash = window.location.hash.replace("#", "");
+  console.log({ hash });
 
-  constraints = {
-    video: {
-      width: { max: 320 },
-      height: { max: 240 },
-      frameRate: { max: 24 },
-    },
-    audio: true,
-  };
+  let localStream = "";
+  let peerConnections = [];
 
-  componentWillMount() {
-    let hash = window.location.hash.replace("#", "");
+  // client = new W3CWebSocket("wss://10.0.1.12:8443");
+  let client = new W3CWebSocket("wss://taskbit.net:8443");
+
+  useEffect(() => {
     if (hash.split("=")[0] === "roomId") {
-      let me = this.state.me;
-      me.roomId = hash.split("=")[1];
-      this.setState({ me: me });
+      // let me = me;
+      // me.roomId = hash.split("=")[1];
+      setMe({ ...me, roomId: hash.split("=")[1] });
     }
-  }
+    initWebsocket();
+  }, []);
+  // state = {
 
-  addVideoFeed = (videoFeed) => {
+  //   login: true,
+  //   peerConnections: [],
+  //   videoFeeds: [],
+  //   stream: null,
+  //   peer: null,
+  // };
+
+  const addVideoFeed = (videoFeed) => {
     console.log("adding video feed");
-    this.setState({ videoFeeds: [...this.state.videoFeeds, videoFeed] });
-    this.setState({ peer: videoFeed });
+    setVideoFeeds([...videoFeeds, videoFeed]);
+    setPeer(videoFeed);
   };
 
-  componentDidMount() {
-    this.client.onopen = () => {
+  function initWebsocket() {
+    console.log("setting websocket");
+    client.onopen = () => {
       console.log("WebSocket Client Connected");
     };
-    this.client.onmessage = (message) => {
+    client.onmessage = (message) => {
       let obj = JSON.parse(message.data);
       console.log(obj);
       switch (obj.eventName) {
         case "selfSetup":
-          this.setState({
-            me: {
-              uuid: obj.data.user.uuid,
-              username: obj.data.user.username,
-              roomId: obj.data.user.room,
-              host: obj.data.user.role === "HOST" ? true : false,
-            },
+          setMe({
+            uuid: obj.data.user.uuid,
+            username: obj.data.user.username,
+            roomId: obj.data.user.room,
+            host: obj.data.user.role === "HOST" ? true : false,
           });
           console.log(`https://10.0.1.12:3000/#roomId=${obj.data.user.room}`);
           break;
         case "p2pAction":
           var peerUuid = obj.data.uuid;
           if (
-            peerUuid === this.state.me.uuid ||
-            (obj.data.dest !== this.state.me.uuid && obj.data.dest !== "all")
+            peerUuid === me.uuid ||
+            (obj.data.dest !== me.uuid && obj.data.dest !== "all")
           ) {
             break;
           }
 
           if (obj.data.displayName && obj.data.dest === "all") {
             // set up peer connection object for a newcomer peer
-            this.setUpPeer(peerUuid, obj.data.displayName);
-            this.client.send(
+            setUpPeer(peerUuid, obj.data.displayName);
+            client.send(
               JSON.stringify({
                 eventName: "p2pAction",
                 data: {
-                  displayName: this.state.me.username,
-                  uuid: this.state.me.uuid,
+                  displayName: me.username,
+                  uuid: me.uuid,
                   dest: peerUuid,
                 },
               })
             );
-          } else if (
-            obj.data.displayName &&
-            obj.data.dest === this.state.me.uuid
-          ) {
+          } else if (obj.data.displayName && obj.data.dest === me.uuid) {
             // initiate call if we are the newcomer peer
-            this.setUpPeer(peerUuid, obj.data.displayName, true);
+            setUpPeer(peerUuid, obj.data.displayName, true);
           } else if (obj.data.sdp) {
-            this.peerConnections[peerUuid].pc
+            peerConnections[peerUuid].pc
               .setRemoteDescription(new RTCSessionDescription(obj.data.sdp))
               .then(() => {
                 // Only create answers in response to offers
                 if (obj.data.sdp.type === "offer") {
-                  this.peerConnections[peerUuid].pc
+                  peerConnections[peerUuid].pc
                     .createAnswer()
                     .then((description) =>
-                      this.createdDescription(description, peerUuid)
+                      createdDescription(description, peerUuid)
                     )
-                    .catch(this.errorHandler);
+                    .catch(errorHandler);
                 }
               })
-              .catch(this.errorHandler);
+              .catch(errorHandler);
           } else if (obj.data.ice) {
-            this.peerConnections[peerUuid].pc
+            peerConnections[peerUuid].pc
               .addIceCandidate(new RTCIceCandidate(obj.data.ice))
-              .catch(this.errorHandler);
+              .catch(errorHandler);
           }
           break;
         default:
@@ -135,14 +136,14 @@ class App extends Component {
     };
   }
 
-  gotIceCandidate = (event, peerUuid) => {
+  const gotIceCandidate = (event, peerUuid) => {
     if (event.candidate != null) {
-      this.client.send(
+      client.send(
         JSON.stringify({
           eventName: "p2pAction",
           data: {
             ice: event.candidate,
-            uuid: this.state.me.uuid,
+            uuid: me.uuid,
             dest: peerUuid,
           },
         })
@@ -150,54 +151,53 @@ class App extends Component {
     }
   };
 
-  setUpPeer = (peerUuid, displayName, initCall = false) => {
+  const setUpPeer = (peerUuid, displayName, initCall = false) => {
     console.log(
       `setting up webRTC peer: uuid - ${peerUuid}, displayName: ${displayName}`
     );
-    this.peerConnections[peerUuid] = {
+    peerConnections[peerUuid] = {
       displayName: displayName,
-      pc: new RTCPeerConnection(this.peerConnectionConfig),
+      pc: new RTCPeerConnection(peerConnectionConfig),
     };
-    this.peerConnections[peerUuid].pc.onicecandidate = (event) =>
-      this.gotIceCandidate(event, peerUuid);
-    this.peerConnections[peerUuid].pc.ontrack = (event) =>
-      this.gotRemoteStream(event, peerUuid);
-    this.peerConnections[peerUuid].pc.oniceconnectionstatechange = (event) =>
-      this.checkPeerDisconnect(event, peerUuid);
-    this.peerConnections[peerUuid].pc.addStream(this.localStream);
+    peerConnections[peerUuid].pc.onicecandidate = (event) =>
+      gotIceCandidate(event, peerUuid);
+    peerConnections[peerUuid].pc.ontrack = (event) =>
+      gotRemoteStream(event, peerUuid);
+    peerConnections[peerUuid].pc.oniceconnectionstatechange = (event) =>
+      checkPeerDisconnect(event, peerUuid);
+    peerConnections[peerUuid].pc.addStream(localStream);
 
     if (initCall) {
-      this.peerConnections[peerUuid].pc
+      peerConnections[peerUuid].pc
         .createOffer()
-        .then((description) => this.createdDescription(description, peerUuid))
-        .catch(this.errorHandler);
+        .then((description) => createdDescription(description, peerUuid))
+        .catch(errorHandler);
     }
   };
 
-  errorHandler = (err) => {
+  const errorHandler = (err) => {
     console.log(err);
   };
 
-  checkPeerDisconnect = (event, peerUuid) => {
-    var states = this.peerConnections[peerUuid].pc.iceConnectionState;
+  const checkPeerDisconnect = (event, peerUuid) => {
+    var states = peerConnections[peerUuid].pc.iceConnectionState;
     console.log(`connection with peer ${peerUuid} ${states}`);
     if (
       states === "failed" ||
       states === "closed" ||
       states === "disconnected"
     ) {
-      delete this.peerConnections[peerUuid];
-      let videoFeeds = this.state.videoFeeds;
+      delete peerConnections[peerUuid];
+      let videoFeeds = videoFeeds;
       videoFeeds = videoFeeds.filter((ele) => {
         return ele.peerUUID !== peerUuid;
       });
-      this.setState({ peer: null });
-      this.setState({ videoFeeds: videoFeeds });
+      setPeer(null);
+      setVideoFeeds(videoFeeds);
     }
   };
 
-  connectToSocket = () => {
-    const { me } = this.state;
+  const connectToSocket = () => {
     let data = {
       eventName: "selfSetup",
       data: {
@@ -205,10 +205,10 @@ class App extends Component {
         displayName: me.username,
       },
     };
-    this.client.send(JSON.stringify(data));
+    client.send(JSON.stringify(data));
   };
 
-  gotRemoteStream = (event, peerUuid) => {
+  const gotRemoteStream = (event, peerUuid) => {
     console.log(event);
     if (event.track.kind === "video") {
       console.log(`got remote stream, peer ${peerUuid}`);
@@ -219,39 +219,36 @@ class App extends Component {
         peerUUID: peerUuid,
         connected: true,
       };
-      if (_isNil(this.state.peer)) this.addVideoFeed(videoFeed);
+      if (_isNil(peer)) addVideoFeed(videoFeed);
       else console.log("already got a peer, doing nothing");
     }
   };
 
-  onLogin = (e) => {
+  const onLogin = (e) => {
     console.log("onLogin");
-    const { me } = this.state;
     if (me.username !== "") {
-      this.setState({ login: false });
-      this.connectToSocket();
+      setLogin(false);
+      connectToSocket();
       console.log("seeting up media devices");
       navigator.mediaDevices
-        .getUserMedia(this.constraints)
+        .getUserMedia(constraints)
         .then((stream) => {
-          this.localStream = stream;
-          console.log({ localStream: this.localStream });
-          // this.localVideoRef.current.srcObject = this.localStream;
-          this.sendPrediction = true;
+          localStream = stream;
+          console.log({ localStream: localStream });
+          // localVideoRef.current.srcObject = localStream;
+
           console.log("should set state of stream");
-          this.setState({ stream: stream }, () =>
-            console.log({ state: this.state })
-          );
+          setStream(stream);
         })
-        .catch(this.errorHandler)
+        .catch(errorHandler)
         .then(() => {
-          this.client.send(
+          client.send(
             JSON.stringify({
               eventName: "p2pAction",
               data: {
-                uuid: this.state.me.uuid,
-                roomId: this.state.me.roomId,
-                displayName: this.state.me.username,
+                uuid: me.uuid,
+                roomId: me.roomId,
+                displayName: me.username,
                 dest: "all",
               },
             })
@@ -259,32 +256,44 @@ class App extends Component {
         });
     }
   };
-  onUsernameUpdate = (e) => {
-    let me = this.state.me;
-    me.username = e.target.value;
-    this.setState({ me: me });
+  const onUsernameUpdate = (e) => {
+    setMe({ ...me, username: e.target.value });
   };
 
-  createdDescription = (description, peerUuid) => {
+  const createdDescription = (description, peerUuid) => {
     console.log(`got description, peer ${peerUuid}`);
-    this.peerConnections[peerUuid].pc
+    peerConnections[peerUuid].pc
       .setLocalDescription(description)
       .then(() => {
-        this.client.send(
+        client.send(
           JSON.stringify({
             eventName: "p2pAction",
             data: {
-              sdp: this.peerConnections[peerUuid].pc.localDescription,
-              uuid: this.state.me.uuid,
+              sdp: peerConnections[peerUuid].pc.localDescription,
+              uuid: me.uuid,
               dest: peerUuid,
             },
           })
         );
       })
-      .catch(this.errorHandler);
+      .catch(errorHandler);
   };
 
-  render() {
+  if (login)
+    return (
+      <div className="App" style={{ marginTop: "15%" }}>
+        <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
+        <input
+          style={{ marginTop: "44px" }}
+          type="text"
+          placeholder="username"
+          name="username"
+          onChange={onUsernameUpdate}
+        />
+        <input type="submit" value="connect" onClick={onLogin} />
+      </div>
+    );
+  else
     return (
       <div
         style={{
@@ -295,58 +304,9 @@ class App extends Component {
           alignItems: "center",
         }}
       >
-        <Router>
-          <Switch>
-            <Route
-              exact
-              path="/"
-              render={(props) => <Home wsClient={this.client} />}
-            />
-          </Switch>
-        </Router>
+        <VideoFeed stream={stream} peer={peer} videoFeeds={videoFeeds} />
       </div>
     );
-  }
-
-  // render() {
-  //   const { loading_model, login } = this.state;
-  //   let page;
-
-  //   if (login) {
-  //     page = (
-  //       <div className="App" style={{ marginTop: "15%" }}>
-  //         <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
-  //         <input
-  //           style={{ marginTop: "44px" }}
-  //           type="text"
-  //           placeholder="username"
-  //           name="username"
-  //           onChange={this.onUsernameUpdate}
-  //         />
-  //         <input type="submit" value="connect" onClick={this.onLogin} />
-  //       </div>
-  //     );
-  //   } else {
-  //     page = (
-  //       <div
-  //         style={{
-  //           display: "flex",
-  //           width: "100vw",
-  //           height: "100vh",
-  //           justifyContent: "flex-start",
-  //           alignItems: "center",
-  //         }}
-  //       >
-  //         <VideoFeed
-  //           stream={this.state.stream}
-  //           peer={this.state.peer}
-  //           videoFeeds={this.state.videoFeeds}
-  //         />
-  //       </div>
-  //     );
-  //   }
-  //   return <React.Fragment>{page}</React.Fragment>;
-  // }
 }
 
 export default App;
