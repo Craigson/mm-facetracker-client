@@ -20,8 +20,14 @@ function VideoFeed({ stream, videoFeeds, peer }) {
         stream={stream}
         // videoRef={videoRef}
         userId="me"
+        position="left"
+        connected={true}
       />
-      <FaceTracker stream={_get(peer, "stream", null)} userId="other" />
+      <FaceTracker
+        stream={_get(peer, "stream", null)}
+        userId="peer"
+        connected={_get(peer, "connected", false)}
+      />
     </div>
   );
 }

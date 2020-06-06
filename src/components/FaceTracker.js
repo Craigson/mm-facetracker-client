@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import * as facemesh from "@tensorflow-models/facemesh";
 import _isNil from "lodash/isNil";
 
@@ -42,7 +42,7 @@ function drawPath(ctx, points, closePath) {
   ctx.stroke(region);
 }
 
-const FaceTracker = ({ videoRef, userId, stream }) => {
+const FaceTracker = ({ videoRef, userId, stream, connected }) => {
   const [count, setCount] = React.useState(0);
   const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
@@ -161,26 +161,32 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
         justifyContent: "center",
       }}
     >
-      <video
-        id={`video-${userId}`}
-        autoPlay
-        muted
-        // ref={videoRef}
-        playsInline
-        style={{
-          WebkitTransform: "scaleX(-1)",
-          transform: "scaleX(-1)",
-          visibility: "hidden",
-          // display: "none",
-          width: "2px",
-          height: "2px",
-          border: "3px solid green",
-        }}
-      />
-      <canvas
-        id={`output-${userId}`}
-        // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
-      />
+      {connected ? (
+        <>
+          <video
+            id={`video-${userId}`}
+            autoPlay
+            muted
+            // ref={videoRef}
+            playsInline
+            style={{
+              WebkitTransform: "scaleX(-1)",
+              transform: "scaleX(-1)",
+              visibility: "hidden",
+              // display: "none",
+              width: "2px",
+              height: "2px",
+              border: "3px solid green",
+            }}
+          />
+          <canvas
+            id={`output-${userId}`}
+            // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
+          />
+        </>
+      ) : (
+        <div>Waiting for connection...</div>
+      )}
     </div>
   );
 };

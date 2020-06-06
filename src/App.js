@@ -203,6 +203,7 @@ class App extends Component {
       videoFeeds = videoFeeds.filter((ele) => {
         return ele.peerUUID !== peerUuid;
       });
+      this.setState({ peer: null });
       this.setState({ videoFeeds: videoFeeds });
     }
   };
@@ -228,6 +229,7 @@ class App extends Component {
         ref: streamRef,
         stream: event.streams[0],
         peerUUID: peerUuid,
+        connected: true,
       };
       if (_isNil(this.state.peer)) this.addVideoFeed(videoFeed);
       else console.log("already got a peer, doing nothing");
