@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
-import "./App.css";
-import VideoFeed from "./components/VideoFeed";
+import "../App.css";
+import VideoFeed from "../components/VideoFeed";
 
 class App extends Component {
   constructor(props) {
@@ -319,7 +319,7 @@ class App extends Component {
           }}
         >
           <VideoFeed
-            stream={this.state.stream}
+            stream={stream}
             // videoRef={this.localVideoRef}
             videoFeeds={this.state.videoFeeds}
           />

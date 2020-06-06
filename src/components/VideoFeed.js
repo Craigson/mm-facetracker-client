@@ -1,9 +1,9 @@
-import React, { Component } from "react";
+import React, { Component, useEffect } from "react";
 import FaceTracker from "./FaceTracker";
 
-class VideoFeed extends Component {
-  componentDidUpdate() {
-    const { videoFeeds } = this.props;
+function VideoFeed({ stream, videoFeeds }) {
+  useEffect(() => {
+    console.log("VideoFeed useEffect");
     videoFeeds.forEach((element) => {
       element.ref.current.srcObject = element.stream;
     });
@@ -24,16 +24,9 @@ class VideoFeed extends Component {
 
     document.documentElement.style.setProperty(`--rowHeight`, rowHeight);
     document.documentElement.style.setProperty(`--colWidth`, colWidth);
-  }
-  shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.videoFeeds !== nextProps.videoFeeds) {
-      return true;
-    }
-    return false;
-  }
+  }, [stream]);
 
-  renderAdditionalFeeds() {
-    const { videoFeeds } = this.props;
+  function renderAdditionalFeeds() {
     return (
       <div>
         {videoFeeds.map((feed, index) => (
@@ -46,18 +39,26 @@ class VideoFeed extends Component {
     );
   }
 
-  render() {
-    const { videoRef, videoFeeds } = this.props;
-    return (
-      <div className="videos">
-        <div className="videoContainer">
-          <FaceTracker videoRef={videoRef} userId="0" />
-          {/* <video ref={videoRef} autoPlay muted /> */}
-        </div>
-        {this.renderAdditionalFeeds()}
+  return (
+    <div
+      style={{
+        display: "flex",
+        width: "100%",
+        border: "1px solid black",
+        height: 480,
+      }}
+    >
+      <div className="videoContainer">
+        <FaceTracker
+          stream={stream}
+          // videoRef={videoRef}
+          userId="0"
+        />
+        {/* <video ref={videoRef} autoPlay muted /> */}
       </div>
-    );
-  }
+      {/* {this.renderAdditionalFeeds()} */}
+    </div>
+  );
 }
 
 export default VideoFeed;

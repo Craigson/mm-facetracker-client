@@ -41,14 +41,22 @@ function drawPath(ctx, points, closePath) {
   ctx.stroke(region);
 }
 
-const FaceTracker = ({ videoRef, userId }) => {
+const FaceTracker = ({ videoRef, userId, stream }) => {
   const [count, setCount] = React.useState(0);
+  const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
 
   let faces = [];
   let model = null;
   let ctx, videoWidth, videoHeight, video, canvas;
+
+  useEffect(() => {
+    console.log("useEffect FaceTracker");
+    console.log({ stream });
+    _init();
+  }, [stream]);
+
   async function _init() {
     model = await facemesh.load();
 
@@ -56,6 +64,7 @@ const FaceTracker = ({ videoRef, userId }) => {
     // an array of detected faces from the MediaPipe graph.
     // video = document.querySelector("video");
     video = document.getElementById(`video-${userId}`);
+    video.srcObject = stream;
     video.addEventListener("loadeddata", async (event) => {
       console.log(
         "Yay! The readyState just increased to  " +
@@ -84,7 +93,6 @@ const FaceTracker = ({ videoRef, userId }) => {
   }
 
   async function renderPrediction() {
-    const predictions = await model.estimateFaces(video);
     ctx.drawImage(
       video,
       0,
@@ -97,34 +105,36 @@ const FaceTracker = ({ videoRef, userId }) => {
       canvas.height
     );
 
+    if (trackingEnabled) {
+      const predictions = await model.estimateFaces(video);
+      if (predictions.length > 0) {
+        predictions.forEach((prediction) => {
+          const keypoints = prediction.scaledMesh;
+          if (triangulateMesh) {
+            for (let i = 0; i < TRIANGULATION.length / 3; i++) {
+              const points = [
+                TRIANGULATION[i * 3],
+                TRIANGULATION[i * 3 + 1],
+                TRIANGULATION[i * 3 + 2],
+              ].map((index) => keypoints[index]);
+
+              drawPath(ctx, points, true);
+            }
+          } else {
+            for (let i = 0; i < keypoints.length; i++) {
+              const x = keypoints[i][0];
+              const y = keypoints[i][1];
+
+              ctx.beginPath();
+              ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          }
+        });
+      }
+    }
     // ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (predictions.length > 0) {
-      predictions.forEach((prediction) => {
-        const keypoints = prediction.scaledMesh;
-
-        if (triangulateMesh) {
-          for (let i = 0; i < TRIANGULATION.length / 3; i++) {
-            const points = [
-              TRIANGULATION[i * 3],
-              TRIANGULATION[i * 3 + 1],
-              TRIANGULATION[i * 3 + 2],
-            ].map((index) => keypoints[index]);
-
-            drawPath(ctx, points, true);
-          }
-        } else {
-          for (let i = 0; i < keypoints.length; i++) {
-            const x = keypoints[i][0];
-            const y = keypoints[i][1];
-
-            ctx.beginPath();
-            ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
-            ctx.fill();
-          }
-        }
-      });
-    }
     requestAnimationFrame(renderPrediction);
   }
 
@@ -137,17 +147,13 @@ const FaceTracker = ({ videoRef, userId }) => {
   //     console.log(faces.length);
   //   });
 
-  useEffect(() => {
-    _init();
-  }, []);
-
   return (
     <div className="canvas-wrapper">
       <video
         id={`video-${userId}`}
         autoPlay
         muted
-        ref={videoRef}
+        // ref={videoRef}
         playsInline
         style={{
           WebkitTransform: "scaleX(-1)",
