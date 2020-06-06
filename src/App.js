@@ -53,8 +53,8 @@ class App extends Component {
 
   constraints = {
     video: {
-      width: { max: 640 },
-      height: { max: 480 },
+      width: { max: 320 },
+      height: { max: 240 },
       frameRate: { max: 24 },
     },
     audio: true,

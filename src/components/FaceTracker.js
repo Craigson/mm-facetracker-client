@@ -67,6 +67,14 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
     // video = document.querySelector("video");
     video = document.getElementById(`video-${userId}`);
     video.srcObject = stream;
+    video.addEventListener("playing", function () {
+      setTimeout(function () {
+        console.log(
+          "Stream dimensions: " + video.videoWidth + "x" + video.videoHeight
+        );
+      }, 500);
+    });
+
     video.addEventListener("loadeddata", async (event) => {
       console.log(
         "Yay! The readyState just increased to  " +
@@ -78,8 +86,8 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
       video.height = videoHeight;
 
       canvas = document.getElementById(`output-${userId}`);
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
+      canvas.width = videoWidth * 2;
+      canvas.height = videoHeight * 2;
       // const canvasContainer = document.querySelector(".canvas-wrapper");
       // canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
 
@@ -100,18 +108,21 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
       video,
       0,
       0,
-      videoWidth,
-      videoHeight,
+      videoWidth * 2,
+      videoHeight * 2,
       0,
       0,
-      canvas.width,
-      canvas.height
+      canvas.width * 2,
+      canvas.height * 2
     );
 
     if (trackingEnabled) {
       if (predictions.length > 0) {
         predictions.forEach((prediction) => {
-          const keypoints = prediction.scaledMesh;
+          // const keypoints = prediction.scaledMesh;
+          const keypoints = prediction.scaledMesh.map((set) =>
+            set.map((c) => c * 2)
+          );
           if (triangulateMesh) {
             for (let i = 0; i < TRIANGULATION.length / 3; i++) {
               const points = [
@@ -161,8 +172,8 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
           transform: "scaleX(-1)",
           visibility: "hidden",
           // display: "none",
-          width: "auto",
-          height: "auto",
+          width: "2px",
+          height: "2px",
           border: "3px solid green",
         }}
       />
