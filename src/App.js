@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
+import _isNil from "lodash/isNil";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
 
@@ -47,6 +48,7 @@ class App extends Component {
     peerConnections: [],
     videoFeeds: [],
     stream: null,
+    peer: null,
   };
 
   constraints = {
@@ -68,6 +70,7 @@ class App extends Component {
   addVideoFeed = (videoFeed) => {
     console.log("adding video feed");
     this.setState({ videoFeeds: [...this.state.videoFeeds, videoFeed] });
+    this.setState({ peer: videoFeed });
   };
 
   componentDidMount() {
@@ -226,7 +229,8 @@ class App extends Component {
         stream: event.streams[0],
         peerUUID: peerUuid,
       };
-      this.addVideoFeed(videoFeed);
+      if (_isNil(this.state.peer)) this.addVideoFeed(videoFeed);
+      else console.log("already got a peer, doing nothing");
     }
   };
 
@@ -236,11 +240,12 @@ class App extends Component {
     if (me.username !== "") {
       this.setState({ login: false });
       this.connectToSocket();
-
+      console.log("seeting up media devices");
       navigator.mediaDevices
         .getUserMedia(this.constraints)
         .then((stream) => {
           this.localStream = stream;
+          console.log({ localStream: this.localStream });
           // this.localVideoRef.current.srcObject = this.localStream;
           this.sendPrediction = true;
           console.log("should set state of stream");
@@ -320,6 +325,7 @@ class App extends Component {
         >
           <VideoFeed
             stream={this.state.stream}
+            peer={this.state.peer}
             videoFeeds={this.state.videoFeeds}
           />
         </div>

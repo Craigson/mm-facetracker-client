@@ -55,6 +55,7 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
   useEffect(() => {
     console.log("useEffect FaceTracker");
     console.log({ stream });
+    if (_isNil(stream)) return;
     _init();
   }, [stream]);
 
@@ -94,22 +95,20 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
   }
 
   async function renderPrediction() {
-    // ctx.drawImage(
-    //   video,
-    //   0,
-    //   0,
-    //   videoWidth,
-    //   videoHeight,
-    //   Math.floor(parseInt(userId) * canvas.width),
-    //   Math.floor(parseInt(userId) * canvas.height),
-    //   canvas.width,
-    //   canvas.height
-    // );
-
-    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const predictions = await model.estimateFaces(video);
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      videoWidth,
+      videoHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
 
     if (trackingEnabled) {
-      const predictions = await model.estimateFaces(video);
       if (predictions.length > 0) {
         predictions.forEach((prediction) => {
           const keypoints = prediction.scaledMesh;
@@ -140,15 +139,6 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
     requestAnimationFrame(renderPrediction);
   }
 
-  //   useAnimationFrame(async (deltaTime) => {
-  //     // Pass on a function to the setter of the state
-  //     // to make sure we always have the latest state
-  //     console.log("animate");
-  //     if (model !== null) faces = await model.estimateFaces(video);
-  //     // faces.forEach((face) => console.log(face.scaledMesh));
-  //     console.log(faces.length);
-  //   });
-
   return (
     <div
       style={{
@@ -156,6 +146,8 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
         flex: 1,
         border: "2px solid red",
         position: "relative",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
       <video
@@ -167,7 +159,7 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
         style={{
           WebkitTransform: "scaleX(-1)",
           transform: "scaleX(-1)",
-          // visibility: "hidden",
+          visibility: "hidden",
           // display: "none",
           width: "auto",
           height: "auto",
@@ -176,8 +168,8 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
       />
       <canvas
         id={`output-${userId}`}
-        style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
-      ></canvas>
+        // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
+      />
     </div>
   );
 };
