@@ -1,8 +1,10 @@
 import React, { Component, useEffect } from "react";
-import FaceTracker from "./FaceTracker";
+import { useAppState } from "../context/app-context";
+import FaceTracker from "../components/FaceTracker";
 import _get from "lodash/get";
 
-function VideoFeed({ stream, videoFeeds, peer }) {
+function Room() {
+  const { stream, peer } = useAppState();
   useEffect(() => {
     console.log("VideoFeed useEffect");
   }, [stream, peer]);
@@ -32,4 +34,4 @@ function VideoFeed({ stream, videoFeeds, peer }) {
   );
 }
 
-export default VideoFeed;
+export default Room;

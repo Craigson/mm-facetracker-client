@@ -9,16 +9,49 @@ export const AppDispatchContext = createContext();
 
 const initialState = {
   initialized: false,
+  wsClient: null,
+  username: null,
+  roomId: "",
+  stream: null,
+  uuid: null,
 };
 
 function AppReducer(state, action) {
-  // logger("App Reducer: ", action.type, action.data);
+  console.log("App Reducer: ", action.type, action.data);
   // console.log(action.type, action.data);
 
   switch (action.type) {
     case "init":
       return produce(state, (draftState) => {
         draftState.initialized = action.data;
+      });
+
+    case "setWs":
+      return produce(state, (draftState) => {
+        draftState.wsClient = action.data;
+      });
+
+    case "setUsername":
+      return produce(state, (draftState) => {
+        draftState.username = action.data;
+      });
+
+    case "setRoomId":
+      return produce(state, (draftState) => {
+        draftState.roomId = action.data;
+      });
+
+    case "setStream":
+      return produce(state, (draftState) => {
+        draftState.stream = action.data;
+      });
+
+    case "setup":
+      return produce(state, (draftState) => {
+        draftState.uuid = action.data.uuid;
+        draftState.username = action.data.username;
+        draftState.roomId = action.data.room;
+        draftState.host = action.data.role === "HOST" ? true : false;
       });
 
     default:
@@ -43,7 +76,7 @@ function useAppState() {
   if (context === undefined) {
     throw new Error("useAppState must be used within a NavProvider");
   }
-  // console.log({ context });
+  console.log({ context });
   return context;
 }
 

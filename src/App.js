@@ -2,18 +2,23 @@ import React, { useState, useEffect } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import _isNil from "lodash/isNil";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
-import { Home } from "./containers";
-import "./App.css";
-import VideoFeed from "./components/VideoFeed";
+import {
+  AppProvider,
+  useAppDispatch,
+  useAppState,
+} from "./context/app-context";
+import { Home, Room } from "./containers";
 
-const constraints = {
-  video: {
-    width: { max: 320 },
-    height: { max: 240 },
-    frameRate: { max: 24 },
-  },
-  audio: true,
-};
+import "./App.css";
+
+// const constraints = {
+//   video: {
+//     width: { max: 320 },
+//     height: { max: 240 },
+//     frameRate: { max: 24 },
+//   },
+//   audio: true,
+// };
 
 const peerConnectionConfig = {
   iceServers: [
@@ -23,6 +28,8 @@ const peerConnectionConfig = {
 };
 
 function App() {
+  const appDispatch = useAppDispatch();
+  const { stream } = useAppState();
   const [me, setMe] = useState({
     uuid: "",
     username: "",
@@ -31,25 +38,30 @@ function App() {
   });
   const [login, setLogin] = useState(true);
   const [videoFeeds, setVideoFeeds] = useState([]);
-  const [stream, setStream] = useState(null);
+  // const [stream, setStream] = useState(null);
   const [peer, setPeer] = useState(null);
 
-  const hash = window.location.hash.replace("#", "");
-  console.log({ hash });
-
-  let localStream = "";
+  // let localStream = "";
   let peerConnections = [];
 
-  // client = new W3CWebSocket("wss://10.0.1.12:8443");
-  let client = new W3CWebSocket("wss://taskbit.net:8443");
+  let client = new W3CWebSocket("wss://10.0.1.12:8443");
+  // let client = new W3CWebSocket("wss://taskbit.net:8443");
 
   useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    console.log({ hash });
     if (hash.split("=")[0] === "roomId") {
-      // let me = me;
-      // me.roomId = hash.split("=")[1];
       setMe({ ...me, roomId: hash.split("=")[1] });
+      appDispatch({
+        type: "setRoomId",
+        data: hash.split("=")[1], // TODO: replace this with URL
+      });
     }
     initWebsocket();
+    appDispatch({
+      type: "setWs",
+      data: client,
+    });
   }, []);
   // state = {
 
@@ -73,9 +85,14 @@ function App() {
     };
     client.onmessage = (message) => {
       let obj = JSON.parse(message.data);
+      console.log("received a message of type: ", obj.eventName);
       console.log(obj);
       switch (obj.eventName) {
         case "selfSetup":
+          appDispatch({
+            type: "setup",
+            data: obj.data.user,
+          });
           setMe({
             uuid: obj.data.user.uuid,
             username: obj.data.user.username,
@@ -165,7 +182,7 @@ function App() {
       gotRemoteStream(event, peerUuid);
     peerConnections[peerUuid].pc.oniceconnectionstatechange = (event) =>
       checkPeerDisconnect(event, peerUuid);
-    peerConnections[peerUuid].pc.addStream(localStream);
+    peerConnections[peerUuid].pc.addStream(stream); // TODO: should come from global state
 
     if (initCall) {
       peerConnections[peerUuid].pc
@@ -197,16 +214,16 @@ function App() {
     }
   };
 
-  const connectToSocket = () => {
-    let data = {
-      eventName: "selfSetup",
-      data: {
-        roomId: me.roomId,
-        displayName: me.username,
-      },
-    };
-    client.send(JSON.stringify(data));
-  };
+  // const connectToSocket = () => {
+  //   let data = {
+  //     eventName: "selfSetup",
+  //     data: {
+  //       roomId: me.roomId,
+  //       displayName: me.username,
+  //     },
+  //   };
+  //   client.send(JSON.stringify(data));
+  // };
 
   const gotRemoteStream = (event, peerUuid) => {
     console.log(event);
@@ -226,35 +243,35 @@ function App() {
 
   const onLogin = (e) => {
     console.log("onLogin");
-    if (me.username !== "") {
-      setLogin(false);
-      connectToSocket();
-      console.log("seeting up media devices");
-      navigator.mediaDevices
-        .getUserMedia(constraints)
-        .then((stream) => {
-          localStream = stream;
-          console.log({ localStream: localStream });
-          // localVideoRef.current.srcObject = localStream;
+    // if (me.username !== "") {
+    //   setLogin(false);
+    //   connectToSocket();
+    //   console.log("seeting up media devices");
+    //   navigator.mediaDevices
+    //     .getUserMedia(constraints)
+    //     .then((stream) => {
+    //       localStream = stream;
+    //       console.log({ localStream: localStream });
+    //       // localVideoRef.current.srcObject = localStream;
 
-          console.log("should set state of stream");
-          setStream(stream);
-        })
-        .catch(errorHandler)
-        .then(() => {
-          client.send(
-            JSON.stringify({
-              eventName: "p2pAction",
-              data: {
-                uuid: me.uuid,
-                roomId: me.roomId,
-                displayName: me.username,
-                dest: "all",
-              },
-            })
-          );
-        });
-    }
+    //       console.log("should set state of stream");
+    //       setStream(stream);
+    //     })
+    //     .catch(errorHandler)
+    //     .then(() => {
+    //       client.send(
+    //         JSON.stringify({
+    //           eventName: "p2pAction",
+    //           data: {
+    //             uuid: me.uuid,
+    //             roomId: me.roomId,
+    //             displayName: me.username,
+    //             dest: "all",
+    //           },
+    //         })
+    //       );
+    //     });
+    // }
   };
   const onUsernameUpdate = (e) => {
     setMe({ ...me, username: e.target.value });
@@ -278,6 +295,18 @@ function App() {
       })
       .catch(errorHandler);
   };
+
+  return (
+    <Router>
+      <Switch>
+        <Route exact path="/" component={Home} />
+        <Route exact path="/room" component={Room} />
+      </Switch>
+    </Router>
+  );
+
+  {
+    /* </div>)
 
   if (login)
     return (
@@ -306,7 +335,8 @@ function App() {
       >
         <VideoFeed stream={stream} peer={peer} videoFeeds={videoFeeds} />
       </div>
-    );
+    ); */
+  }
 }
 
 export default App;
