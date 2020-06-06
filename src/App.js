@@ -1,14 +1,14 @@
 import React, { Component } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import _isNil from "lodash/isNil";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { Home } from "./containers";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
 
 class App extends Component {
   constructor(props) {
     super(props);
-    this.localVideoRef = React.createRef();
-    this.canvasRef = React.createRef();
     this.localStream = "";
     this.peerConnections = [];
     this.peerConnectionConfig = {
@@ -20,21 +20,6 @@ class App extends Component {
 
     // this.client = new W3CWebSocket("wss://10.0.1.12:8443");
     this.client = new W3CWebSocket("wss://taskbit.net:8443");
-
-    this.sendPrediction = false;
-    this.hasStream = [];
-  }
-
-  componentWillMount() {
-    let hash = window.location.hash.replace("#", "");
-    if (hash.split("=")[0] === "roomId") {
-      let me = this.state.me;
-      me.roomId = hash.split("=")[1];
-      this.setState({ me: me });
-    }
-    (async () => {
-      this.setState({ loading_model: false });
-    })();
   }
 
   state = {
@@ -61,12 +46,14 @@ class App extends Component {
     audio: true,
   };
 
-  addUser = (player) => {
-    console.log("adding new user");
-    if (this.state.players < 2)
-      this.setState({ players: [...this.state.players, player] });
-    else console.log("max 2 people per room");
-  };
+  componentWillMount() {
+    let hash = window.location.hash.replace("#", "");
+    if (hash.split("=")[0] === "roomId") {
+      let me = this.state.me;
+      me.roomId = hash.split("=")[1];
+      this.setState({ me: me });
+    }
+  }
 
   addVideoFeed = (videoFeed) => {
     console.log("adding video feed");
@@ -298,44 +285,68 @@ class App extends Component {
   };
 
   render() {
-    const { loading_model, login } = this.state;
-    let page;
-
-    if (login) {
-      page = (
-        <div className="App" style={{ marginTop: "15%" }}>
-          <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
-          <input
-            style={{ marginTop: "44px" }}
-            type="text"
-            placeholder="username"
-            name="username"
-            onChange={this.onUsernameUpdate}
-          />
-          <input type="submit" value="connect" onClick={this.onLogin} />
-        </div>
-      );
-    } else {
-      page = (
-        <div
-          style={{
-            display: "flex",
-            width: "100vw",
-            height: "100vh",
-            justifyContent: "flex-start",
-            alignItems: "center",
-          }}
-        >
-          <VideoFeed
-            stream={this.state.stream}
-            peer={this.state.peer}
-            videoFeeds={this.state.videoFeeds}
-          />
-        </div>
-      );
-    }
-    return <React.Fragment>{page}</React.Fragment>;
+    return (
+      <div
+        style={{
+          display: "flex",
+          width: "100vw",
+          height: "100vh",
+          justifyContent: "flex-start",
+          alignItems: "center",
+        }}
+      >
+        <Router>
+          <Switch>
+            <Route
+              exact
+              path="/"
+              render={(props) => <Home wsClient={this.client} />}
+            />
+          </Switch>
+        </Router>
+      </div>
+    );
   }
+
+  // render() {
+  //   const { loading_model, login } = this.state;
+  //   let page;
+
+  //   if (login) {
+  //     page = (
+  //       <div className="App" style={{ marginTop: "15%" }}>
+  //         <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
+  //         <input
+  //           style={{ marginTop: "44px" }}
+  //           type="text"
+  //           placeholder="username"
+  //           name="username"
+  //           onChange={this.onUsernameUpdate}
+  //         />
+  //         <input type="submit" value="connect" onClick={this.onLogin} />
+  //       </div>
+  //     );
+  //   } else {
+  //     page = (
+  //       <div
+  //         style={{
+  //           display: "flex",
+  //           width: "100vw",
+  //           height: "100vh",
+  //           justifyContent: "flex-start",
+  //           alignItems: "center",
+  //         }}
+  //       >
+  //         <VideoFeed
+  //           stream={this.state.stream}
+  //           peer={this.state.peer}
+  //           videoFeeds={this.state.videoFeeds}
+  //         />
+  //       </div>
+  //     );
+  //   }
+  //   return <React.Fragment>{page}</React.Fragment>;
+  // }
 }
 
 export default App;
