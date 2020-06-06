@@ -47,6 +47,7 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
   const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
+  const [loaded, setLoaded] = useState(false);
 
   let faces = [];
   let model = null;
@@ -68,11 +69,8 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
     video = document.getElementById(`video-${userId}`);
     video.srcObject = stream;
     video.addEventListener("playing", function () {
-      setTimeout(function () {
-        console.log(
-          "Stream dimensions: " + video.videoWidth + "x" + video.videoHeight
-        );
-      }, 500);
+      console.log("playing");
+      setLoaded(true);
     });
 
     video.addEventListener("loadeddata", async (event) => {
@@ -161,28 +159,29 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
         justifyContent: "center",
       }}
     >
+      <video
+        id={`video-${userId}`}
+        autoPlay
+        muted
+        // ref={videoRef}
+        playsInline
+        style={{
+          WebkitTransform: "scaleX(-1)",
+          transform: "scaleX(-1)",
+          visibility: "hidden",
+          // display: "none",
+          width: "2px",
+          height: "2px",
+          border: "3px solid green",
+        }}
+      />
       {connected ? (
         <>
-          <video
-            id={`video-${userId}`}
-            autoPlay
-            muted
-            // ref={videoRef}
-            playsInline
-            style={{
-              WebkitTransform: "scaleX(-1)",
-              transform: "scaleX(-1)",
-              visibility: "hidden",
-              // display: "none",
-              width: "2px",
-              height: "2px",
-              border: "3px solid green",
-            }}
-          />
           <canvas
             id={`output-${userId}`}
             // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
           />
+          {!loaded && <div style={{ position: "absolute" }}>loading...</div>}
         </>
       ) : (
         <div>Waiting for connection...</div>

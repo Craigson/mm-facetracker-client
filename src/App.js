@@ -93,11 +93,15 @@ function App() {
             type: "setup",
             data: obj.data.user,
           });
-          setMe({
-            uuid: obj.data.user.uuid,
-            username: obj.data.user.username,
-            roomId: obj.data.user.room,
-            host: obj.data.user.role === "HOST" ? true : false,
+          // setMe({
+          //   uuid: obj.data.user.uuid,
+          //   username: obj.data.user.username,
+          //   roomId: obj.data.user.room,
+          //   host: obj.data.user.role === "HOST" ? true : false,
+          // });
+          appDispatch({
+            type: "setRoomUrl",
+            data: `https://10.0.1.12:3000/#roomId=${obj.data.user.room}`,
           });
           console.log(`https://10.0.1.12:3000/#roomId=${obj.data.user.room}`);
           break;

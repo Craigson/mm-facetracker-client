@@ -14,6 +14,7 @@ const initialState = {
   roomId: "",
   stream: null,
   uuid: null,
+  roomUrl: null,
 };
 
 function AppReducer(state, action) {
@@ -46,12 +47,18 @@ function AppReducer(state, action) {
         draftState.stream = action.data;
       });
 
+    case "setRoomUrl":
+      return produce(state, (draftState) => {
+        draftState.roomUrl = action.data;
+      });
+
     case "setup":
       return produce(state, (draftState) => {
         draftState.uuid = action.data.uuid;
         draftState.username = action.data.username;
         draftState.roomId = action.data.room;
         draftState.host = action.data.role === "HOST" ? true : false;
+        draftState.initialized = true;
       });
 
     default:
