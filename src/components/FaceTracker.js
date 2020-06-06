@@ -3,6 +3,7 @@ import * as facemesh from "@tensorflow-models/facemesh";
 import _isNil from "lodash/isNil";
 
 import { TRIANGULATION } from "./triangulation";
+import { findByLabelText } from "@testing-library/react";
 
 // const useAnimationFrame = (callback) => {
 //   // Use useRef for mutable variables that we want to persist
@@ -43,7 +44,7 @@ function drawPath(ctx, points, closePath) {
 
 const FaceTracker = ({ videoRef, userId, stream }) => {
   const [count, setCount] = React.useState(0);
-  const [trackingEnabled, setTrackingEnabled] = useState(false);
+  const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
 
@@ -58,7 +59,7 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
   }, [stream]);
 
   async function _init() {
-    model = await facemesh.load();
+    model = await facemesh.load({ maxFaces: 1 });
 
     // Pass in a video stream to the model to obtain
     // an array of detected faces from the MediaPipe graph.
@@ -78,8 +79,8 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
       canvas = document.getElementById(`output-${userId}`);
       canvas.width = videoWidth;
       canvas.height = videoHeight;
-      const canvasContainer = document.querySelector(".canvas-wrapper");
-      canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
+      // const canvasContainer = document.querySelector(".canvas-wrapper");
+      // canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
 
       ctx = canvas.getContext("2d");
       ctx.translate(canvas.width, 0);
@@ -93,17 +94,19 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
   }
 
   async function renderPrediction() {
-    ctx.drawImage(
-      video,
-      0,
-      0,
-      videoWidth,
-      videoHeight,
-      Math.floor(parseInt(userId) * canvas.width),
-      Math.floor(parseInt(userId) * canvas.height),
-      canvas.width,
-      canvas.height
-    );
+    // ctx.drawImage(
+    //   video,
+    //   0,
+    //   0,
+    //   videoWidth,
+    //   videoHeight,
+    //   Math.floor(parseInt(userId) * canvas.width),
+    //   Math.floor(parseInt(userId) * canvas.height),
+    //   canvas.width,
+    //   canvas.height
+    // );
+
+    // ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (trackingEnabled) {
       const predictions = await model.estimateFaces(video);
@@ -133,7 +136,6 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
         });
       }
     }
-    // ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     requestAnimationFrame(renderPrediction);
   }
@@ -148,7 +150,14 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
   //   });
 
   return (
-    <div className="canvas-wrapper">
+    <div
+      style={{
+        display: "flex",
+        flex: 1,
+        border: "2px solid red",
+        position: "relative",
+      }}
+    >
       <video
         id={`video-${userId}`}
         autoPlay
@@ -158,12 +167,17 @@ const FaceTracker = ({ videoRef, userId, stream }) => {
         style={{
           WebkitTransform: "scaleX(-1)",
           transform: "scaleX(-1)",
-          visibility: "hidden",
+          // visibility: "hidden",
+          // display: "none",
           width: "auto",
           height: "auto",
+          border: "3px solid green",
         }}
       />
-      <canvas id={`output-${userId}`}></canvas>
+      <canvas
+        id={`output-${userId}`}
+        style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
+      ></canvas>
     </div>
   );
 };

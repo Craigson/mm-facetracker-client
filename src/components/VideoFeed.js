@@ -43,20 +43,17 @@ function VideoFeed({ stream, videoFeeds }) {
     <div
       style={{
         display: "flex",
+        flexDirection: "row",
         width: "100%",
         border: "1px solid black",
         height: 480,
       }}
     >
-      <div className="videoContainer">
-        <FaceTracker
-          stream={stream}
-          // videoRef={videoRef}
-          userId="0"
-        />
-        {/* <video ref={videoRef} autoPlay muted /> */}
-      </div>
-      {/* {this.renderAdditionalFeeds()} */}
+      <FaceTracker
+        stream={stream}
+        // videoRef={videoRef}
+        userId="0"
+      />
     </div>
   );
 }

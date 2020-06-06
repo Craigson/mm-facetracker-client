@@ -51,8 +51,8 @@ class App extends Component {
 
   constraints = {
     video: {
-      width: { max: 320 },
-      height: { max: 240 },
+      width: { max: 640 },
+      height: { max: 480 },
       frameRate: { max: 24 },
     },
     audio: true,
@@ -320,7 +320,6 @@ class App extends Component {
         >
           <VideoFeed
             stream={this.state.stream}
-            // videoRef={this.localVideoRef}
             videoFeeds={this.state.videoFeeds}
           />
         </div>
