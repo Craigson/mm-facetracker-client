@@ -9,7 +9,6 @@ const Header = styled.div`
   display: flex;
   flex: 1;
   width: 100%;
-  border: 2px solid green;
   justify-content: center;
   align-items: center;
   font-size: 3rem;
@@ -19,13 +18,11 @@ const UserDetailsContainer = styled.div`
   display: flex;
   flex: 1;
   width: 100%;
-  border: 2px solid blue;
 `;
 
 const UserDetails = styled.div`
   display: flex;
   flex: 1;
-  border: 1px solid orange;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
@@ -45,7 +42,9 @@ class App extends Component {
       ],
     };
 
-    this.client = new W3CWebSocket("wss://10.0.1.12:8443");
+    this.client = new W3CWebSocket("wss://filters.chat:3000");
+    // this.client = new W3CWebSocket("wss://filters.chat:8000");
+    // this.client = new W3CWebSocket("wss://filters.chat:5000");
     // this.client = new W3CWebSocket("wss://taskbit.net:8443");
 
     this.sendPrediction = false;
@@ -124,7 +123,7 @@ class App extends Component {
               host: obj.data.user.role === "HOST" ? true : false,
             },
           });
-          console.log(`https://10.0.1.12:3000/#roomId=${obj.data.user.room}`);
+          console.log(`https://localhost:3000/#roomId=${obj.data.user.room}`);
           break;
         case "p2pAction":
           var peerUuid = obj.data.uuid;

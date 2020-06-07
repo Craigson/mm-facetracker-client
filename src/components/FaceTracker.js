@@ -150,7 +150,6 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
       style={{
         display: "flex",
         flex: 1,
-        border: "2px solid red",
         position: "relative",
         alignItems: "center",
         justifyContent: "center",

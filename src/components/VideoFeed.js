@@ -15,7 +15,7 @@ function VideoFeed({ stream, videoFeeds, peer }) {
         width: "100%",
         border: "1px solid black",
         minHeight: 480,
-        border: "1px solid red",
+        // border: "1px solid red",
       }}
     >
       <FaceTracker
