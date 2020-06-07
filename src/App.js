@@ -18,8 +18,8 @@ class App extends Component {
       ],
     };
 
-    // this.client = new W3CWebSocket("wss://10.0.1.12:8443");
-    this.client = new W3CWebSocket("wss://taskbit.net:8443");
+    this.client = new W3CWebSocket("wss://10.0.1.12:8443");
+    // this.client = new W3CWebSocket("wss://taskbit.net:8443");
 
     this.sendPrediction = false;
     this.hasStream = [];
