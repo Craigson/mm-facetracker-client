@@ -10,15 +10,16 @@ function VideoFeed({ stream, videoFeeds, peer }) {
     <div
       style={{
         display: "flex",
+        flex: 1,
         flexDirection: "row",
         width: "100%",
         border: "1px solid black",
-        height: 480,
+        minHeight: 480,
+        border: "1px solid red",
       }}
     >
       <FaceTracker
         stream={stream}
-        // videoRef={videoRef}
         userId="me"
         position="left"
         connected={true}

@@ -1,8 +1,35 @@
 import React, { Component } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import _isNil from "lodash/isNil";
+import styled from "styled-components";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
+
+const Header = styled.div`
+  display: flex;
+  flex: 1;
+  width: 100%;
+  border: 2px solid green;
+  justify-content: center;
+  align-items: center;
+  font-size: 3rem;
+`;
+
+const UserDetailsContainer = styled.div`
+  display: flex;
+  flex: 1;
+  width: 100%;
+  border: 2px solid blue;
+`;
+
+const UserDetails = styled.div`
+  display: flex;
+  flex: 1;
+  border: 1px solid orange;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+`;
 
 class App extends Component {
   constructor(props) {
@@ -50,6 +77,8 @@ class App extends Component {
     videoFeeds: [],
     stream: null,
     peer: null,
+    route: "login",
+    peerUsername: null,
   };
 
   constraints = {
@@ -82,6 +111,10 @@ class App extends Component {
       let obj = JSON.parse(message.data);
       console.log(obj);
       switch (obj.eventName) {
+        case "userConnected":
+          this.setState({ peerUsername: obj.data.user.username });
+          break;
+
         case "selfSetup":
           this.setState({
             me: {
@@ -185,6 +218,8 @@ class App extends Component {
         .then((description) => this.createdDescription(description, peerUuid))
         .catch(this.errorHandler);
     }
+
+    this.setState({ peerUsername: displayName });
   };
 
   errorHandler = (err) => {
@@ -242,6 +277,7 @@ class App extends Component {
     const { me } = this.state;
     if (me.username !== "") {
       this.setState({ login: false });
+      this.setState({ route: "chat" });
       this.connectToSocket();
       console.log("seeting up media devices");
       navigator.mediaDevices
@@ -301,40 +337,37 @@ class App extends Component {
     const { loading_model, login } = this.state;
     let page;
 
-    if (login) {
-      page = (
-        <div className="App" style={{ marginTop: "15%" }}>
-          <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
-          <input
-            style={{ marginTop: "44px" }}
-            type="text"
-            placeholder="username"
-            name="username"
-            onChange={this.onUsernameUpdate}
-          />
-          <input type="submit" value="connect" onClick={this.onLogin} />
-        </div>
-      );
-    } else {
-      page = (
-        <div
-          style={{
-            display: "flex",
-            width: "100vw",
-            height: "100vh",
-            justifyContent: "flex-start",
-            alignItems: "center",
-          }}
-        >
-          <VideoFeed
-            stream={this.state.stream}
-            peer={this.state.peer}
-            videoFeeds={this.state.videoFeeds}
-          />
-        </div>
-      );
+    switch (this.state.route) {
+      case "login":
+        return (
+          <div className="dark-container" style={{ justifyContent: "center" }}>
+            <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
+            <input
+              style={{ marginTop: "44px" }}
+              type="text"
+              placeholder="username"
+              name="username"
+              onChange={this.onUsernameUpdate}
+            />
+            <input type="submit" value="connect" onClick={this.onLogin} />
+          </div>
+        );
+
+      case "chat":
+        return (
+          <div className="dark-container">
+            <Header>MediaMonks AR Chat</Header>
+            <VideoFeed stream={this.state.stream} peer={this.state.peer} />
+            <UserDetailsContainer>
+              <UserDetails>{this.state.me.username}</UserDetails>
+              <UserDetails>{this.state.peerUsername}</UserDetails>
+            </UserDetailsContainer>
+          </div>
+        );
+
+      default:
+        return null;
     }
-    return <React.Fragment>{page}</React.Fragment>;
   }
 }
 
