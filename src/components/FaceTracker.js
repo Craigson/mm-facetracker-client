@@ -173,10 +173,15 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
         }}
       />
       {connected ? (
-        <canvas
-          id={`output-${userId}`}
-          // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
-        />
+        <>
+          <canvas
+            id={`output-${userId}`}
+            // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
+          />
+          {!videoLoaded && (
+            <div style={{ position: "absolute" }}>loading...</div>
+          )}
+        </>
       ) : (
         <div>Waiting for connection...</div>
       )}
