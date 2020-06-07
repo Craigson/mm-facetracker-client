@@ -52,6 +52,7 @@ class App extends Component {
   }
 
   componentWillMount() {
+    console.log("loading window location");
     let hash = window.location.hash.replace("#", "");
     if (hash.split("=")[0] === "roomId") {
       let me = this.state.me;
