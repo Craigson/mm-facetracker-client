@@ -1,30 +1,29 @@
 import React, { useEffect, useState, Fragment } from "react";
 import * as facemesh from "@tensorflow-models/facemesh";
 import _isNil from "lodash/isNil";
-
+import styled from "styled-components";
+import { css } from "@emotion/core";
+import FadeLoader from "react-spinners/FadeLoader";
 import { TRIANGULATION } from "./triangulation";
+import cameraImg from "../assets/images/videocam-outline.svg";
 import { findByLabelText } from "@testing-library/react";
 
-// const useAnimationFrame = (callback) => {
-//   // Use useRef for mutable variables that we want to persist
-//   // without triggering a re-render on their change
-//   const requestRef = React.useRef();
-//   const previousTimeRef = React.useRef();
+const StyledCanvas = styled.canvas`
+  border-radius: 10px;
+  box-shadow: 4px 4px 12px 2px rgba(33, 33, 33, 0.5);
+`;
 
-//   const animate = (time) => {
-//     if (previousTimeRef.current != undefined) {
-//       const deltaTime = time - previousTimeRef.current;
-//       callback(deltaTime);
-//     }
-//     previousTimeRef.current = time;
-//     requestRef.current = requestAnimationFrame(animate);
-//   };
-
-//   React.useEffect(() => {
-//     requestRef.current = requestAnimationFrame(animate);
-//     return () => cancelAnimationFrame(requestRef.current);
-//   }, []); // Make sure the effect runs only once
-// };
+const ImageButtonContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  border-radius: 20px;
+  position: absolute;
+  bottom: 10px;
+`;
 
 const triangulateMesh = true;
 
@@ -42,12 +41,14 @@ function drawPath(ctx, points, closePath) {
   ctx.stroke(region);
 }
 
-const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
+let showVid = true;
+
+const FaceTracker = ({ videoRef, userId, stream, connected, muted, name }) => {
   const [count, setCount] = React.useState(0);
   const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
-
+  const [showVideo, setShowVideo] = useState(true);
   let faces = [];
   let model = null;
   let ctx, videoWidth, videoHeight, video, canvas;
@@ -98,23 +99,26 @@ const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
       ctx.fillStyle = "#32EEDB";
       ctx.strokeStyle = "#32EEDB";
       ctx.lineWidth = 0.5;
-      renderPrediction();
+      renderPrediction(showVideo);
     });
   }
 
   async function renderPrediction() {
     const predictions = await model.estimateFaces(video);
-    ctx.drawImage(
-      video,
-      0,
-      0,
-      videoWidth * 2,
-      videoHeight * 2,
-      0,
-      0,
-      canvas.width * 2,
-      canvas.height * 2
-    );
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (showVid) {
+      ctx.drawImage(
+        video,
+        0,
+        0,
+        videoWidth * 2,
+        videoHeight * 2,
+        0,
+        0,
+        canvas.width * 2,
+        canvas.height * 2
+      );
+    }
 
     if (trackingEnabled) {
       if (predictions.length > 0) {
@@ -156,6 +160,39 @@ const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
     vid.muted = !vid.muted;
   }
 
+  function _toggleVideo() {
+    console.log({ showVideo });
+    showVid = !showVid;
+    setShowVideo(!showVideo);
+  }
+
+  const Name = () => {
+    return (
+      <div
+        style={{
+          position: "absolute",
+          top: 10,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          color: "white",
+          padding: "5px 10px",
+        }}
+      >
+        {name.toUpperCase()}
+      </div>
+    );
+  };
+  const ImageButton = () => {
+    return (
+      <ImageButtonContainer>
+        <img
+          style={{ width: 25, height: 25 }}
+          onClick={_toggleVideo}
+          src={cameraImg}
+        />
+      </ImageButtonContainer>
+    );
+  };
+
   return (
     <div
       style={{
@@ -183,18 +220,22 @@ const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
       />
       {connected ? (
         <>
-          <canvas
+          <Name />
+          <StyledCanvas
             id={`output-${userId}`}
             // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
           />
-          {/* <button
-            style={{ position: "absolute", top: 0 }}
-            onClick={_toggleMute}
-          >
-            Mute
-          </button> */}
+          {userId === "me" && <ImageButton />}
           {!videoLoaded && (
-            <div style={{ position: "absolute" }}>loading...</div>
+            <div style={{ position: "absolute" }}>
+              <FadeLoader
+                color={"white"}
+                width={5}
+                radius={2}
+                height={15}
+                loading={true}
+              />
+            </div>
           )}
         </>
       ) : (

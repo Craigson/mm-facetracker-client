@@ -2,18 +2,41 @@ import React, { Component } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import _isNil from "lodash/isNil";
 import styled from "styled-components";
+import ReactTooltip from "react-tooltip";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
 import FancyInput from "./components/FancyInput";
+import CountdownClock from "./components/CountdownClock";
 
 const Header = styled.div`
   display: flex;
   flex: 1;
-  flex-direction: column;
+  flex-direction: row;
   width: 100%;
+  max-width: 1440px;
   justify-content: center;
-  align-items: center;
-  font-size: 3rem;
+  align-items: flex-start;
+  font-size: 2rem;
+  padding: 0 30px;
+  padding-top: 50px;
+`;
+
+const InstructionContainer = styled.div`
+  display: flex;
+  flex: 3;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  font-size: 2rem;
+`;
+
+const TimeContainer = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  font-size: 1.5rem;
 `;
 
 const UserDetailsContainer = styled.div`
@@ -28,7 +51,7 @@ const RoomDetailsContainer = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0.75;
+  flex: 1;
   width: 100%;
 `;
 
@@ -386,28 +409,65 @@ class App extends Component {
       case "chat":
         return (
           <div className="dark-container">
-            <Header>MediaMonks AR Chat</Header>
-            <VideoFeed stream={this.state.stream} peer={this.state.peer} />
-            <UserDetailsContainer>
+            <Header>
+              <InstructionContainer>
+                <div style={{ color: "lightgray", fontSize: "1rem" }}>
+                  INSTRUCTION
+                </div>
+                <div style={{ fontFamily: "Nova Script" }}>
+                  WAVE HELLO - AND TELL THEM HOW YOU REALLY FEEL.
+                </div>
+                <div style={{ fontFamily: "Nova Script" }}>
+                  NOTHING LASTS FOREVER.
+                </div>
+              </InstructionContainer>
+              <TimeContainer>
+                <div style={{ color: "lightgray", fontSize: "1rem" }}>
+                  TIME REMAINING
+                </div>
+                <CountdownClock />
+              </TimeContainer>
+            </Header>
+            <VideoFeed
+              stream={this.state.stream}
+              peer={this.state.peer}
+              myName={this.state.me.username}
+              peerName={this.state.peerUsername}
+            />
+            {/* <UserDetailsContainer>
               <UserDetails>{this.state.me.username}</UserDetails>
               <UserDetails>{this.state.peerUsername}</UserDetails>
-            </UserDetailsContainer>
+            </UserDetailsContainer> */}
             <RoomDetailsContainer>
               <>
                 <div style={{ color: "gray" }}>ROOM </div>
                 <div style={{ color: "gray" }}>#{this.state.me.roomId}</div>
               </>
               {_isNil(this.state.peer) && (
-                <Button
-                  style={{ marginTop: 50 }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `${window.location.hostname}/#roomId=${this.state.me.roomId}`
-                    );
-                  }}
-                >
-                  COPY LINK
-                </Button>
+                <>
+                  <ReactTooltip type="light" effect="solid" />
+                  <p
+                    ref={(ref) => (this.fooRef = ref)}
+                    data-tip="link copied to clipboard!"
+                  />
+                  <Button
+                    // data-tip="copied to clipboard!"
+                    // ref={(ref) => (this.fooRef = ref)}
+                    onClick={() => {
+                      console.log("should copy to clipboard");
+                      navigator.clipboard.writeText(
+                        `${window.location.href}#roomId=${this.state.me.roomId}`
+                      );
+                      ReactTooltip.show(this.fooRef);
+                      setTimeout(() => {
+                        console.log("should hide");
+                        ReactTooltip.hide();
+                      }, 1500);
+                    }}
+                  >
+                    COPY LINK
+                  </Button>
+                </>
               )}
             </RoomDetailsContainer>
           </div>
