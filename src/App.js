@@ -51,7 +51,7 @@ const RoomDetailsContainer = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0.75;
+  flex: 1;
   width: 100%;
 `;
 
@@ -428,11 +428,16 @@ class App extends Component {
                 <CountdownClock />
               </TimeContainer>
             </Header>
-            <VideoFeed stream={this.state.stream} peer={this.state.peer} />
-            <UserDetailsContainer>
+            <VideoFeed
+              stream={this.state.stream}
+              peer={this.state.peer}
+              myName={this.state.me.username}
+              peerName={this.state.peerUsername}
+            />
+            {/* <UserDetailsContainer>
               <UserDetails>{this.state.me.username}</UserDetails>
               <UserDetails>{this.state.peerUsername}</UserDetails>
-            </UserDetailsContainer>
+            </UserDetailsContainer> */}
             <RoomDetailsContainer>
               <>
                 <div style={{ color: "gray" }}>ROOM </div>

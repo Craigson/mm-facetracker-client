@@ -2,7 +2,7 @@ import React, { Component, useEffect } from "react";
 import FaceTracker from "./FaceTracker";
 import _get from "lodash/get";
 
-function VideoFeed({ stream, videoFeeds, peer }) {
+function VideoFeed({ stream, videoFeeds, peer, myName, peerName }) {
   useEffect(() => {
     console.log("VideoFeed useEffect");
   }, [stream, peer]);
@@ -25,12 +25,14 @@ function VideoFeed({ stream, videoFeeds, peer }) {
         position="left"
         connected={true}
         muted={true}
+        name={myName}
       />
       <FaceTracker
         stream={_get(peer, "stream", null)}
         userId="peer"
         connected={_get(peer, "connected", false)}
         muted={false}
+        name={peerName}
       />
     </div>
   );
