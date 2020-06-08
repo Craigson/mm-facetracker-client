@@ -1,52 +1,7 @@
 import React, { Component } from "react";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
-import _isNil from "lodash/isNil";
-import styled from "styled-components";
-import "./App.css";
-import VideoFeed from "./components/VideoFeed";
-import FancyInput from "./components/FancyInput";
-
-const Header = styled.div`
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  width: 100%;
-  justify-content: center;
-  align-items: center;
-  font-size: 3rem;
-`;
-
-const UserDetailsContainer = styled.div`
-  display: flex;
-  flex: 0.25;
-  width: 100%;
-`;
-
-const RoomDetailsContainer = styled.div`
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 0.75;
-  width: 100%;
-`;
-
-const UserDetails = styled.div`
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-`;
-
-const Button = styled.button`
-  width: 200px;
-  height: 60px;
-  background-color: #ff4dff;
-  color: white;
-  border-radius: 10px;
-`;
+import "../App.css";
+import VideoFeed from "../components/VideoFeed";
 
 class App extends Component {
   constructor(props) {
@@ -62,22 +17,17 @@ class App extends Component {
       ],
     };
 
-    this.client = new W3CWebSocket("wss://filters.chat:3000");
-    // this.client = new W3CWebSocket("wss://filters.chat:8000");
-    // this.client = new W3CWebSocket("wss://filters.chat:5000");
-    // this.client = new W3CWebSocket("wss://taskbit.net:8443");
+    this.client = new W3CWebSocket("wss://10.0.1.12:8443");
 
     this.sendPrediction = false;
     this.hasStream = [];
   }
 
   componentWillMount() {
-    console.log("loading window location");
     let hash = window.location.hash.replace("#", "");
     if (hash.split("=")[0] === "roomId") {
       let me = this.state.me;
       me.roomId = hash.split("=")[1];
-      console.log("seeting roomId: ", me.roomId);
       this.setState({ me: me });
     }
     (async () => {
@@ -97,9 +47,6 @@ class App extends Component {
     peerConnections: [],
     videoFeeds: [],
     stream: null,
-    peer: null,
-    route: "login",
-    peerUsername: null,
   };
 
   constraints = {
@@ -121,7 +68,6 @@ class App extends Component {
   addVideoFeed = (videoFeed) => {
     console.log("adding video feed");
     this.setState({ videoFeeds: [...this.state.videoFeeds, videoFeed] });
-    this.setState({ peer: videoFeed });
   };
 
   componentDidMount() {
@@ -132,10 +78,6 @@ class App extends Component {
       let obj = JSON.parse(message.data);
       console.log(obj);
       switch (obj.eventName) {
-        case "userConnected":
-          this.setState({ peerUsername: obj.data.user.username });
-          break;
-
         case "selfSetup":
           this.setState({
             me: {
@@ -145,7 +87,7 @@ class App extends Component {
               host: obj.data.user.role === "HOST" ? true : false,
             },
           });
-          console.log(`https://localhost:3000/#roomId=${obj.data.user.room}`);
+          console.log(`https://10.0.1.12:3000/#roomId=${obj.data.user.room}`);
           break;
         case "p2pAction":
           var peerUuid = obj.data.uuid;
@@ -239,8 +181,6 @@ class App extends Component {
         .then((description) => this.createdDescription(description, peerUuid))
         .catch(this.errorHandler);
     }
-
-    this.setState({ peerUsername: displayName });
   };
 
   errorHandler = (err) => {
@@ -260,7 +200,6 @@ class App extends Component {
       videoFeeds = videoFeeds.filter((ele) => {
         return ele.peerUUID !== peerUuid;
       });
-      this.setState({ peer: null });
       this.setState({ videoFeeds: videoFeeds });
     }
   };
@@ -286,27 +225,22 @@ class App extends Component {
         ref: streamRef,
         stream: event.streams[0],
         peerUUID: peerUuid,
-        connected: true,
       };
-      if (_isNil(this.state.peer)) this.addVideoFeed(videoFeed);
-      else console.log("already got a peer, doing nothing");
+      this.addVideoFeed(videoFeed);
     }
   };
 
   onLogin = (e) => {
     console.log("onLogin");
-    // console.log(this.state.me.roomId);
     const { me } = this.state;
     if (me.username !== "") {
       this.setState({ login: false });
-      this.setState({ route: "chat" });
       this.connectToSocket();
-      console.log("seeting up media devices");
+
       navigator.mediaDevices
         .getUserMedia(this.constraints)
         .then((stream) => {
           this.localStream = stream;
-          console.log({ localStream: this.localStream });
           // this.localVideoRef.current.srcObject = this.localStream;
           this.sendPrediction = true;
           console.log("should set state of stream");
@@ -358,64 +292,41 @@ class App extends Component {
   render() {
     const { loading_model, login } = this.state;
     let page;
-    // console.log(this.state.me.roomId.length);
-    switch (this.state.route) {
-      case "login":
-        return (
-          <div className="dark-container" style={{ justifyContent: "center" }}>
-            <div style={{ fontSize: "3rem", marginBottom: 50 }}>
-              MediaMonks AR Chat
-            </div>
-            {this.state.me.roomId.length > 0 && (
-              <>
-                <div style={{ color: "gray" }}>Joining room </div>
-                <div style={{ color: "gray" }}>#{this.state.me.roomId}</div>
-              </>
-            )}
-            <FancyInput
-              label="Your name"
-              onChange={this.onUsernameUpdate}
-              name="username"
-            />
-            <Button onClick={this.onLogin}>
-              {this.state.me.roomId === "" ? "CREATE ROOM" : "JOIN ROOM"}
-            </Button>
-          </div>
-        );
 
-      case "chat":
-        return (
-          <div className="dark-container">
-            <Header>MediaMonks AR Chat</Header>
-            <VideoFeed stream={this.state.stream} peer={this.state.peer} />
-            <UserDetailsContainer>
-              <UserDetails>{this.state.me.username}</UserDetails>
-              <UserDetails>{this.state.peerUsername}</UserDetails>
-            </UserDetailsContainer>
-            <RoomDetailsContainer>
-              <>
-                <div style={{ color: "gray" }}>ROOM </div>
-                <div style={{ color: "gray" }}>#{this.state.me.roomId}</div>
-              </>
-              {_isNil(this.state.peer) && (
-                <Button
-                  style={{ marginTop: 50 }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `${window.location.hostname}/#roomId=${this.state.me.roomId}`
-                    );
-                  }}
-                >
-                  COPY LINK
-                </Button>
-              )}
-            </RoomDetailsContainer>
-          </div>
-        );
-
-      default:
-        return null;
+    if (login) {
+      page = (
+        <div className="App" style={{ marginTop: "15%" }}>
+          <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
+          <input
+            style={{ marginTop: "44px" }}
+            type="text"
+            placeholder="username"
+            name="username"
+            onChange={this.onUsernameUpdate}
+          />
+          <input type="submit" value="connect" onClick={this.onLogin} />
+        </div>
+      );
+    } else {
+      page = (
+        <div
+          style={{
+            display: "flex",
+            width: "100vw",
+            height: "100vh",
+            justifyContent: "flex-start",
+            alignItems: "center",
+          }}
+        >
+          <VideoFeed
+            stream={stream}
+            // videoRef={this.localVideoRef}
+            videoFeeds={this.state.videoFeeds}
+          />
+        </div>
+      );
     }
+    return <React.Fragment>{page}</React.Fragment>;
   }
 }
 

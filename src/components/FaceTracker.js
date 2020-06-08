@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import * as facemesh from "@tensorflow-models/facemesh";
 import _isNil from "lodash/isNil";
 
 import { TRIANGULATION } from "./triangulation";
+import { findByLabelText } from "@testing-library/react";
 
 // const useAnimationFrame = (callback) => {
 //   // Use useRef for mutable variables that we want to persist
@@ -41,21 +42,35 @@ function drawPath(ctx, points, closePath) {
   ctx.stroke(region);
 }
 
-const FaceTracker = ({ videoRef, userId }) => {
+const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
   const [count, setCount] = React.useState(0);
+  const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
 
   let faces = [];
   let model = null;
   let ctx, videoWidth, videoHeight, video, canvas;
+
+  useEffect(() => {
+    console.log("useEffect FaceTracker");
+    console.log({ stream });
+    if (_isNil(stream)) return;
+    _init();
+  }, [stream]);
+
   async function _init() {
-    model = await facemesh.load();
+    model = await facemesh.load({ maxFaces: 1 });
 
     // Pass in a video stream to the model to obtain
     // an array of detected faces from the MediaPipe graph.
     // video = document.querySelector("video");
     video = document.getElementById(`video-${userId}`);
+    video.srcObject = stream;
+    video.addEventListener("playing", function () {
+      setVideoLoaded(true);
+    });
+
     video.addEventListener("loadeddata", async (event) => {
       console.log(
         "Yay! The readyState just increased to  " +
@@ -66,11 +81,16 @@ const FaceTracker = ({ videoRef, userId }) => {
       video.width = videoWidth;
       video.height = videoHeight;
 
+      if (muted) {
+        console.log(`setting ${userId} to mute`);
+        video.muted = muted;
+      }
+
       canvas = document.getElementById(`output-${userId}`);
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
-      const canvasContainer = document.querySelector(".canvas-wrapper");
-      canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
+      canvas.width = videoWidth * 2;
+      canvas.height = videoHeight * 2;
+      // const canvasContainer = document.querySelector(".canvas-wrapper");
+      // canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
 
       ctx = canvas.getContext("2d");
       ctx.translate(canvas.width, 0);
@@ -78,7 +98,6 @@ const FaceTracker = ({ videoRef, userId }) => {
       ctx.fillStyle = "#32EEDB";
       ctx.strokeStyle = "#32EEDB";
       ctx.lineWidth = 0.5;
-      setVideoLoaded(true);
       renderPrediction();
     });
   }
@@ -89,75 +108,98 @@ const FaceTracker = ({ videoRef, userId }) => {
       video,
       0,
       0,
-      videoWidth,
-      videoHeight,
-      Math.floor(parseInt(userId) * canvas.width),
-      Math.floor(parseInt(userId) * canvas.height),
-      canvas.width,
-      canvas.height
+      videoWidth * 2,
+      videoHeight * 2,
+      0,
+      0,
+      canvas.width * 2,
+      canvas.height * 2
     );
 
-    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (trackingEnabled) {
+      if (predictions.length > 0) {
+        predictions.forEach((prediction) => {
+          // const keypoints = prediction.scaledMesh;
+          const keypoints = prediction.scaledMesh.map((set) =>
+            set.map((c) => c * 2)
+          );
+          if (triangulateMesh) {
+            for (let i = 0; i < TRIANGULATION.length / 3; i++) {
+              const points = [
+                TRIANGULATION[i * 3],
+                TRIANGULATION[i * 3 + 1],
+                TRIANGULATION[i * 3 + 2],
+              ].map((index) => keypoints[index]);
 
-    if (predictions.length > 0) {
-      predictions.forEach((prediction) => {
-        const keypoints = prediction.scaledMesh;
+              drawPath(ctx, points, true);
+            }
+          } else {
+            for (let i = 0; i < keypoints.length; i++) {
+              const x = keypoints[i][0];
+              const y = keypoints[i][1];
 
-        if (triangulateMesh) {
-          for (let i = 0; i < TRIANGULATION.length / 3; i++) {
-            const points = [
-              TRIANGULATION[i * 3],
-              TRIANGULATION[i * 3 + 1],
-              TRIANGULATION[i * 3 + 2],
-            ].map((index) => keypoints[index]);
-
-            drawPath(ctx, points, true);
+              ctx.beginPath();
+              ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
+              ctx.fill();
+            }
           }
-        } else {
-          for (let i = 0; i < keypoints.length; i++) {
-            const x = keypoints[i][0];
-            const y = keypoints[i][1];
-
-            ctx.beginPath();
-            ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
-            ctx.fill();
-          }
-        }
-      });
+        });
+      }
     }
+
     requestAnimationFrame(renderPrediction);
   }
 
-  //   useAnimationFrame(async (deltaTime) => {
-  //     // Pass on a function to the setter of the state
-  //     // to make sure we always have the latest state
-  //     console.log("animate");
-  //     if (model !== null) faces = await model.estimateFaces(video);
-  //     // faces.forEach((face) => console.log(face.scaledMesh));
-  //     console.log(faces.length);
-  //   });
-
-  useEffect(() => {
-    _init();
-  }, []);
+  function _toggleMute() {
+    let vid = document.getElementById(`video-${userId}`);
+    console.log({ vid });
+    vid.muted = !vid.muted;
+  }
 
   return (
-    <div className="canvas-wrapper">
+    <div
+      style={{
+        display: "flex",
+        flex: 1,
+        position: "relative",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <video
         id={`video-${userId}`}
         autoPlay
-        muted
-        ref={videoRef}
+        // ref={videoRef}
         playsInline
         style={{
           WebkitTransform: "scaleX(-1)",
           transform: "scaleX(-1)",
           visibility: "hidden",
-          width: "auto",
-          height: "auto",
+          // display: "none",
+          width: "2px",
+          height: "2px",
+          border: "3px solid green",
         }}
       />
-      <canvas id={`output-${userId}`}></canvas>
+      {connected ? (
+        <>
+          <canvas
+            id={`output-${userId}`}
+            // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
+          />
+          {/* <button
+            style={{ position: "absolute", top: 0 }}
+            onClick={_toggleMute}
+          >
+            Mute
+          </button> */}
+          {!videoLoaded && (
+            <div style={{ position: "absolute" }}>loading...</div>
+          )}
+        </>
+      ) : (
+        <div>Waiting for connection...</div>
+      )}
     </div>
   );
 };
