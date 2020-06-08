@@ -42,9 +42,8 @@ function drawPath(ctx, points, closePath) {
   ctx.stroke(region);
 }
 
-const FaceTracker = ({ videoRef, userId, stream, connected }) => {
+const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
   const [count, setCount] = React.useState(0);
-  const [muted, setMuted] = useState(true);
   const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
@@ -81,6 +80,11 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
       videoHeight = video.videoHeight;
       video.width = videoWidth;
       video.height = videoHeight;
+
+      if (muted) {
+        console.log(`setting ${userId} to mute`);
+        video.muted = muted;
+      }
 
       canvas = document.getElementById(`output-${userId}`);
       canvas.width = videoWidth * 2;
@@ -151,6 +155,7 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
     console.log({ vid });
     vid.muted = !vid.muted;
   }
+
   return (
     <div
       style={{
@@ -164,7 +169,6 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
       <video
         id={`video-${userId}`}
         autoPlay
-        muted
         // ref={videoRef}
         playsInline
         style={{
@@ -183,12 +187,12 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
             id={`output-${userId}`}
             // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
           />
-          <button
+          {/* <button
             style={{ position: "absolute", top: 0 }}
             onClick={_toggleMute}
           >
             Mute
-          </button>
+          </button> */}
           {!videoLoaded && (
             <div style={{ position: "absolute" }}>loading...</div>
           )}

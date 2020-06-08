@@ -13,7 +13,6 @@ function VideoFeed({ stream, videoFeeds, peer }) {
         flex: 1,
         flexDirection: "row",
         width: "100%",
-        border: "1px solid black",
         minHeight: 480,
         // border: "1px solid red",
       }}
@@ -23,11 +22,13 @@ function VideoFeed({ stream, videoFeeds, peer }) {
         userId="me"
         position="left"
         connected={true}
+        muted={true}
       />
       <FaceTracker
         stream={_get(peer, "stream", null)}
         userId="peer"
         connected={_get(peer, "connected", false)}
+        muted={false}
       />
     </div>
   );

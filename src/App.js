@@ -402,7 +402,7 @@ class App extends Component {
                   style={{ marginTop: 50 }}
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `https://d3cq2ksikswqzh.cloudfront.net/#roomId=${this.state.me.roomId}`
+                      `${window.location.hostname}/#roomId=${this.state.me.roomId}`
                     );
                   }}
                 >
