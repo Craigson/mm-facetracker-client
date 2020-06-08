@@ -1,30 +1,16 @@
 import React, { useEffect, useState, Fragment } from "react";
 import * as facemesh from "@tensorflow-models/facemesh";
 import _isNil from "lodash/isNil";
-
+import styled from "styled-components";
+import { css } from "@emotion/core";
+import FadeLoader from "react-spinners/FadeLoader";
 import { TRIANGULATION } from "./triangulation";
 import { findByLabelText } from "@testing-library/react";
 
-// const useAnimationFrame = (callback) => {
-//   // Use useRef for mutable variables that we want to persist
-//   // without triggering a re-render on their change
-//   const requestRef = React.useRef();
-//   const previousTimeRef = React.useRef();
-
-//   const animate = (time) => {
-//     if (previousTimeRef.current != undefined) {
-//       const deltaTime = time - previousTimeRef.current;
-//       callback(deltaTime);
-//     }
-//     previousTimeRef.current = time;
-//     requestRef.current = requestAnimationFrame(animate);
-//   };
-
-//   React.useEffect(() => {
-//     requestRef.current = requestAnimationFrame(animate);
-//     return () => cancelAnimationFrame(requestRef.current);
-//   }, []); // Make sure the effect runs only once
-// };
+const StyledCanvas = styled.canvas`
+  border-radius: 10px;
+  box-shadow: 4px 4px 12px 2px rgba(33, 33, 33, 0.5);
+`;
 
 const triangulateMesh = true;
 
@@ -104,6 +90,7 @@ const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
 
   async function renderPrediction() {
     const predictions = await model.estimateFaces(video);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(
       video,
       0,
@@ -183,7 +170,7 @@ const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
       />
       {connected ? (
         <>
-          <canvas
+          <StyledCanvas
             id={`output-${userId}`}
             // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
           />
@@ -194,7 +181,15 @@ const FaceTracker = ({ videoRef, userId, stream, connected, muted }) => {
             Mute
           </button> */}
           {!videoLoaded && (
-            <div style={{ position: "absolute" }}>loading...</div>
+            <div style={{ position: "absolute" }}>
+              <FadeLoader
+                color={"white"}
+                width={5}
+                radius={2}
+                height={15}
+                loading={true}
+              />
+            </div>
           )}
         </>
       ) : (

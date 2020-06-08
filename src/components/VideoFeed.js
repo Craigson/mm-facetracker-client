@@ -13,8 +13,10 @@ function VideoFeed({ stream, videoFeeds, peer }) {
         flex: 1,
         flexDirection: "row",
         width: "100%",
+        maxWidth: 1440,
         minHeight: 480,
         // border: "1px solid red",
+        // border: "1px solid blue",
       }}
     >
       <FaceTracker
