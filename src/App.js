@@ -4,10 +4,12 @@ import _isNil from "lodash/isNil";
 import styled from "styled-components";
 import "./App.css";
 import VideoFeed from "./components/VideoFeed";
+import FancyInput from "./components/FancyInput";
 
 const Header = styled.div`
   display: flex;
   flex: 1;
+  flex-direction: column;
   width: 100%;
   justify-content: center;
   align-items: center;
@@ -16,7 +18,17 @@ const Header = styled.div`
 
 const UserDetailsContainer = styled.div`
   display: flex;
-  flex: 1;
+  flex: 0.25;
+  width: 100%;
+`;
+
+const RoomDetailsContainer = styled.div`
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0.75;
   width: 100%;
 `;
 
@@ -26,6 +38,14 @@ const UserDetails = styled.div`
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
+`;
+
+const Button = styled.button`
+  width: 200px;
+  height: 60px;
+  background-color: #ff4dff;
+  color: white;
+  border-radius: 10px;
 `;
 
 class App extends Component {
@@ -57,6 +77,7 @@ class App extends Component {
     if (hash.split("=")[0] === "roomId") {
       let me = this.state.me;
       me.roomId = hash.split("=")[1];
+      console.log("seeting roomId: ", me.roomId);
       this.setState({ me: me });
     }
     (async () => {
@@ -274,6 +295,7 @@ class App extends Component {
 
   onLogin = (e) => {
     console.log("onLogin");
+    // console.log(this.state.me.roomId);
     const { me } = this.state;
     if (me.username !== "") {
       this.setState({ login: false });
@@ -336,20 +358,28 @@ class App extends Component {
   render() {
     const { loading_model, login } = this.state;
     let page;
-
+    // console.log(this.state.me.roomId.length);
     switch (this.state.route) {
       case "login":
         return (
           <div className="dark-container" style={{ justifyContent: "center" }}>
-            <div style={{ width: "725px", margin: "0 auto" }}>webRTC</div>
-            <input
-              style={{ marginTop: "44px" }}
-              type="text"
-              placeholder="username"
-              name="username"
+            <div style={{ fontSize: "3rem", marginBottom: 50 }}>
+              MediaMonks AR Chat
+            </div>
+            {this.state.me.roomId.length > 0 && (
+              <>
+                <div style={{ color: "gray" }}>Joining room </div>
+                <div style={{ color: "gray" }}>#{this.state.me.roomId}</div>
+              </>
+            )}
+            <FancyInput
+              label="Your name"
               onChange={this.onUsernameUpdate}
+              name="username"
             />
-            <input type="submit" value="connect" onClick={this.onLogin} />
+            <Button onClick={this.onLogin}>
+              {this.state.me.roomId === "" ? "CREATE ROOM" : "JOIN ROOM"}
+            </Button>
           </div>
         );
 
@@ -362,6 +392,24 @@ class App extends Component {
               <UserDetails>{this.state.me.username}</UserDetails>
               <UserDetails>{this.state.peerUsername}</UserDetails>
             </UserDetailsContainer>
+            <RoomDetailsContainer>
+              <>
+                <div style={{ color: "gray" }}>ROOM </div>
+                <div style={{ color: "gray" }}>#{this.state.me.roomId}</div>
+              </>
+              {_isNil(this.state.peer) && (
+                <Button
+                  style={{ marginTop: 50 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `https://d3cq2ksikswqzh.cloudfront.net/#roomId=${this.state.me.roomId}`
+                    );
+                  }}
+                >
+                  COPY LINK
+                </Button>
+              )}
+            </RoomDetailsContainer>
           </div>
         );
 

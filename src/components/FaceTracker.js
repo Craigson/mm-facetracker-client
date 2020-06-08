@@ -44,6 +44,7 @@ function drawPath(ctx, points, closePath) {
 
 const FaceTracker = ({ videoRef, userId, stream, connected }) => {
   const [count, setCount] = React.useState(0);
+  const [muted, setMuted] = useState(true);
   const [trackingEnabled, setTrackingEnabled] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [uuid, setUuid] = useState(null);
@@ -145,6 +146,11 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
     requestAnimationFrame(renderPrediction);
   }
 
+  function _toggleMute() {
+    let vid = document.getElementById(`video-${userId}`);
+    console.log({ vid });
+    vid.muted = !vid.muted;
+  }
   return (
     <div
       style={{
@@ -177,6 +183,12 @@ const FaceTracker = ({ videoRef, userId, stream, connected }) => {
             id={`output-${userId}`}
             // style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}
           />
+          <button
+            style={{ position: "absolute", top: 0 }}
+            onClick={_toggleMute}
+          >
+            Mute
+          </button>
           {!videoLoaded && (
             <div style={{ position: "absolute" }}>loading...</div>
           )}
